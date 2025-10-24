@@ -11,7 +11,6 @@ export default function TabsLayout() {
           paddingBottom: 6,
           height: 60,
         },
-        detachInactiveScreens={false},
       }}
     >
       <Tabs.Screen
