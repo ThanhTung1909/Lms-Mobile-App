@@ -1,34 +1,68 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
+        tabBarActiveTintColor: "#2b6cb0",
+        tabBarStyle: {
+          paddingBottom: 6,
+          height: 60,
+        },
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="home/index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ focused }) => (
+            <Ionicons name={focused ? "home" : "home-outline"} size={24} />
+          ),
         }}
       />
+
       <Tabs.Screen
-        name="explore"
+        name="courses/index"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Courses",
+          tabBarIcon: ({ focused }) => (
+            <Ionicons name={focused ? "book" : "book-outline"} size={24} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="community/index"
+        options={{
+          title: "Community",
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? "chatbubbles" : "chatbubbles-outline"}
+              size={24}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="my-learning/index"
+        options={{
+          title: "My Learning",
+          tabBarIcon: ({ focused }) => (
+            <Ionicons name={focused ? "school" : "school-outline"} size={24} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile/index"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ focused }) => (
+            <Ionicons name={focused ? "person" : "person-outline"} size={24} />
+          ),
         }}
       />
     </Tabs>
