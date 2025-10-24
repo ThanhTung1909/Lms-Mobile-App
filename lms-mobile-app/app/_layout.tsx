@@ -1,4 +1,3 @@
-// app/_layout.tsx
 import { Slot, useRouter, useRootNavigationState } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
