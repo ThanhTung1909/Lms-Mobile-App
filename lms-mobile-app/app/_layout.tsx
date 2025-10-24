@@ -1,23 +1,23 @@
 import { Slot, useRouter, useRootNavigationState } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   const router = useRouter();
   const rootNavigation = useRootNavigationState();
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isOnboarded, setIsOnboarded] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Fake check – sau này thay bằng AsyncStorage hoặc API
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsOnboarded(false); // giả sử user CHƯA xem onboarding
-      setIsAuthenticated(false); // giả sử user chưa login
+      setIsOnboarded(false);
+      setIsAuthenticated(false);
       setLoading(false);
     }, 1000);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -35,18 +35,28 @@ export default function RootLayout() {
 
   if (loading || !rootNavigation?.key) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "white",
-        }}
-      >
-        <ActivityIndicator size="large" />
-      </View>
+      <SafeAreaProvider>
+        <SafeAreaView
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "white",
+          }}
+        >
+          <ActivityIndicator size="large" />
+          <StatusBar style="dark" />
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
-  return <Slot />;
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
+        <Slot />
+        <StatusBar style="auto" />
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
 }
