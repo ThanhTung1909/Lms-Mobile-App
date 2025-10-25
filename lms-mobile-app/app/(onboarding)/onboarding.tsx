@@ -5,10 +5,10 @@ import {
   Image,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
   useWindowDimensions,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 const slides = [
@@ -73,7 +73,7 @@ export default function Onboarding() {
       });
       setCurrentIndex(nextIndex);
     } else {
-      router.replace("/(auth)/login");
+      router.push("/(auth)/login");
     }
   };
 
@@ -81,7 +81,7 @@ export default function Onboarding() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* SKIP Button */}
       <TouchableOpacity
-        onPress={() => router.replace("/(auth)/login")}
+        onPress={() => router.push("/(auth)/login")}
         style={{ alignSelf: "flex-end", margin: 16 }}
       >
         <Text style={{ color: "#999", fontWeight: "600" }}>SKIP</Text>
@@ -196,7 +196,7 @@ export default function Onboarding() {
                 borderRadius: 8,
                 paddingVertical: 14,
               }}
-              onPress={() => router.replace("/(auth)/login")}
+              onPress={() => router.push("/(auth)/login")}
             >
               <Text
                 style={{
@@ -215,7 +215,7 @@ export default function Onboarding() {
                 borderRadius: 8,
                 paddingVertical: 14,
               }}
-              onPress={() => router.replace("/(auth)/signup")}
+              onPress={() => router.push("/(auth)/signup")}
             >
               <Text
                 style={{

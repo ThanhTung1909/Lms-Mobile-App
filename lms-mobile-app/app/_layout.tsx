@@ -1,21 +1,21 @@
-// app/_layout.tsx
 import { Slot, useRouter, useRootNavigationState } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   const router = useRouter();
   const rootNavigation = useRootNavigationState();
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isOnboarded, setIsOnboarded] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasNavigated, setHasNavigated] = useState(false);
 
-  // Fake check – sau này thay bằng AsyncStorage hoặc API
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsOnboarded(false); // giả sử user CHƯA xem onboarding
-      setIsAuthenticated(false); // giả sử user chưa login
+      setIsOnboarded(false);
+      setIsAuthenticated(false);
       setLoading(false);
     }, 1000);
 
@@ -23,7 +23,9 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!rootNavigation?.key || loading) return;
+    if (!rootNavigation?.key || loading || hasNavigated) return;
+
+    setHasNavigated(true);
 
     if (!isOnboarded) {
       router.replace("/(onboarding)/splash");
@@ -32,22 +34,28 @@ export default function RootLayout() {
     } else {
       router.replace("/(tabs)/home");
     }
-  }, [loading, isAuthenticated, isOnboarded, rootNavigation?.key]);
+  }, [loading, isAuthenticated, isOnboarded, rootNavigation?.key, hasNavigated]);
 
   if (loading || !rootNavigation?.key) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "white",
-        }}
-      >
-        <ActivityIndicator size="large" />
-      </View>
+      <SafeAreaProvider>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "white",
+          }}
+        >
+          <ActivityIndicator size="large" />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
-  return <Slot />;
+  return (
+    <SafeAreaProvider>
+      <Slot />
+    </SafeAreaProvider>
+  );
 }

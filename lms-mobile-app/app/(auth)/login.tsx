@@ -4,9 +4,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -89,9 +89,10 @@ export default function LoginScreen() {
         </View>
 
         {/* Forgot Password */}
-        <TouchableOpacity 
-        onPress={() => router.replace("/(auth)/forgot-password")}
-        style={{ alignSelf: "flex-end", marginBottom: 24 }}>
+        <TouchableOpacity
+          onPress={() => router.push("/(auth)/forgot-password")}
+          style={{ alignSelf: "flex-end", marginBottom: 24 }}
+        >
           <Text style={{ color: "#777", fontSize: 13 }}>Forgot Password?</Text>
         </TouchableOpacity>
 
