@@ -29,7 +29,7 @@ export default function SplashScreen() {
     });
 
     const timer = setTimeout(() => {
-      router.replace("/(onboarding)/onboarding1");
+      router.replace("/(onboarding)/onboarding");
     }, 1500);
     return () => clearTimeout(timer);
   }, []);
