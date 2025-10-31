@@ -10,9 +10,11 @@ import { Tabs, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
+import { useAuth } from "@/src/providers/AuthProvider";
 
 export default function TabsLayout() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -26,15 +28,24 @@ export default function TabsLayout() {
   const getHeaderContent = () => {
     switch (true) {
       case pathname.includes("courses"):
-        return { title: "Your Courses 📚", subtitle: "Continue where you left off" };
+        return {
+          title: "Your Courses 📚",
+          subtitle: "Continue where you left off",
+        };
       case pathname.includes("community"):
         return { title: "Community 💬", subtitle: "Connect & share ideas" };
       case pathname.includes("my-learning"):
         return { title: "My Learning 🎓", subtitle: "Keep up your progress" };
       case pathname.includes("profile"):
-        return { title: "Profile 👤", subtitle: "Manage your account" };
+        return {
+          title: user?.name || "Profile",
+          subtitle: "Manage your account",
+        };
       default:
-        return { title: "Hi, Tung 👋", subtitle: "Ready to learn something new?" };
+        return {
+          title: user ? `Hi, ${user.name} 👋` : "Hi there 👋",
+          subtitle: "Ready to learn something new?",
+        };
     }
   };
 
@@ -75,12 +86,16 @@ export default function TabsLayout() {
 
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="notifications-outline" size={22} color="#1e3a8a" />
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color="#1e3a8a"
+              />
             </TouchableOpacity>
             <TouchableOpacity>
               <Image
                 source={{
-                  uri: "https://i.pravatar.cc/150?img=12", // ảnh avatar thật đẹp hơn
+                  uri: user?.imageUrl || "https://i.pravatar.cc/150?img=12",
                 }}
                 style={styles.avatar}
               />
@@ -180,7 +195,7 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingTop: 10,
+    paddingTop: 50,
     paddingBottom: 18,
     paddingHorizontal: 20,
     borderBottomWidth: 0.3,

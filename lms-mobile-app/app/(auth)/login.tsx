@@ -5,14 +5,29 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/src/providers/AuthProvider";
 
 export default function LoginScreen() {
   const router = useRouter();
+
+  const { login, isLoading, error } = useAuth();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
+
+  const handleLogin = async () => {
+    const success = await login(email, password);
+    if (success) {
+      router.replace("/(tabs)/home");
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -51,6 +66,9 @@ export default function LoginScreen() {
           <TextInput
             placeholder="Email Here"
             keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
             style={{
               borderWidth: 1,
               borderColor: "#ddd",
@@ -67,6 +85,8 @@ export default function LoginScreen() {
           <TextInput
             placeholder="Password"
             secureTextEntry={!passwordVisible}
+            value={password}
+            onChangeText={setPassword}
             style={{
               borderWidth: 1,
               borderColor: "#ddd",
@@ -88,6 +108,19 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        {error ? (
+          <Text
+            style={{
+              color: "red",
+              fontSize: 13,
+              marginBottom: 8,
+              textAlign: "center",
+            }}
+          >
+            {error}
+          </Text>
+        ) : null}
+
         {/* Forgot Password */}
         <TouchableOpacity
           onPress={() => router.push("/(auth)/forgot-password")}
@@ -98,15 +131,26 @@ export default function LoginScreen() {
 
         {/* Sign In Button */}
         <TouchableOpacity
-          onPress={() => router.replace("/(tabs)/home")}
+          onPress={handleLogin}
+          disabled={isLoading}
           style={{
-            backgroundColor: "#001f54",
+            backgroundColor: isLoading ? "#ccc" : "#001f54",
             borderRadius: 8,
             paddingVertical: 14,
             alignItems: "center",
+            flexDirection: "row",
+            justifyContent: "center",
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "700" }}>SIGN IN</Text>
+          {isLoading ? (
+            <ActivityIndicator
+              size="small"
+              color="#fff"
+              style={{ marginRight: 8 }}
+            />
+          ) : (
+            <Text style={{ color: "#fff", fontWeight: "700" }}>SIGN IN</Text>
+          )}
         </TouchableOpacity>
 
         {/* Divider */}

@@ -1,4 +1,4 @@
-// app/(tabs)/courses/enroll.tsx
+
 import { View, Text, Button, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -12,7 +12,6 @@ export default function EnrollScreen() {
 
       <Button
         title="Go to Lesson 1"
-        onPress={() => router.push("/(tabs)/courses/lesson/1")}
       />
     </View>
   );

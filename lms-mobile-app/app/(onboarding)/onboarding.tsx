@@ -10,6 +10,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const ONBOARDING_KEY = "hasOnboarded";
 
 const slides = [
   {
@@ -56,6 +59,16 @@ export default function Onboarding() {
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const handleCompleteOnboarding = async (route: string) => {
+    try {
+      await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+      router.replace(route as any);
+    } catch (e) {
+      console.error("Failed to save onboarding status", e);
+      router.replace(route as any);
+    }
+  };
+
   // Khi người dùng scroll bằng tay
   const handleScrollEnd = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -73,7 +86,7 @@ export default function Onboarding() {
       });
       setCurrentIndex(nextIndex);
     } else {
-      router.push("/(auth)/login");
+      handleCompleteOnboarding("/(auth)/login");
     }
   };
 
@@ -81,7 +94,7 @@ export default function Onboarding() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* SKIP Button */}
       <TouchableOpacity
-        onPress={() => router.push("/(auth)/login")}
+        onPress={() => handleCompleteOnboarding("/(auth)/login")}
         style={{ alignSelf: "flex-end", margin: 16 }}
       >
         <Text style={{ color: "#999", fontWeight: "600" }}>SKIP</Text>
@@ -188,6 +201,7 @@ export default function Onboarding() {
       <View style={{ paddingHorizontal: 20, marginBottom: 30 }}>
         {slides[currentIndex]?.last ? (
           <View style={{ flexDirection: "row", gap: 10 }}>
+            {/* 5. Cập nhật các nút cuối cùng để gọi hàm hoàn thành */}
             <TouchableOpacity
               style={{
                 flex: 1,
@@ -196,7 +210,7 @@ export default function Onboarding() {
                 borderRadius: 8,
                 paddingVertical: 14,
               }}
-              onPress={() => router.push("/(auth)/login")}
+              onPress={() => handleCompleteOnboarding("/(auth)/login")}
             >
               <Text
                 style={{
@@ -215,7 +229,7 @@ export default function Onboarding() {
                 borderRadius: 8,
                 paddingVertical: 14,
               }}
-              onPress={() => router.push("/(auth)/signup")}
+              onPress={() => handleCompleteOnboarding("/(auth)/signup")}
             >
               <Text
                 style={{
