@@ -21,7 +21,35 @@ interface CourseCardProps {
 const CourseCard: React.FC<CourseCardProps> = ({ item, onPress }) => {
     return (
         <TouchableOpacity style={styles.container} onPress={onPress}>
+            {/* Ảnh khóa học */}
+            <Image
+                source={{ uri: item.image || '' }}
+                style={styles.image}
+            />
+            {/* Tag (Best seller, 20% OFF) */}
+            {item.tag && (
+                <View style={styles.tag}>
+                    <Text style={styles.tagText}>{item.tag}</Text>
+                </View>
+            )}
 
+            {/* Nút Bookmark */}
+            <TouchableOpacity style={styles.bookmark}>
+                <Ionicons name="bookmark-outline" size={18} color={COLORS.gray} />
+            </TouchableOpacity>
+
+            {/* Thông tin text */}
+            <View style={styles.infoContainer}>
+                <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.author}>{item.author}</Text>
+
+                <View style={styles.statsContainer}>
+                    <Ionicons name="star" size={14} color={COLORS.yellow} />
+                    <Text style={styles.rating}>{item.rating}</Text>
+                    <Text style={styles.students}>({item.students})</Text>
+                    <Text style={styles.lessons}>- {item.lessons} lessons</Text>
+                </View>
+            </View>
         </TouchableOpacity>
     );
 };

@@ -11,7 +11,10 @@ interface SectionHeaderProps {
 const SectionHeader: React.FC<SectionHeaderProps> = ({ title, onViewMore }) => {
     return (
         <View style={styles.container}>
-
+            <Text style={styles.title}>{title}</Text>
+            <TouchableOpacity onPress={onViewMore}>
+                <Text style={styles.viewMore}>View more</Text>
+            </TouchableOpacity>
         </View>
     );
 };

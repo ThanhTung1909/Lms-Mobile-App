@@ -31,7 +31,20 @@ const CourseList: React.FC<CourseListProps> = ({ title, data, onViewMore }) => {
 
     return (
         <View style={styles.container}>
-
+            <SectionHeader title={title} onViewMore={onViewMore} />
+            <FlatList
+                data={data}
+                renderItem={({ item }) => (
+                    <CourseCard
+                        item={item}
+                        onPress={() => handlePressCourse(item.id)}
+                    />
+                )}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.listContent}
+            />
         </View>
     );
 };
