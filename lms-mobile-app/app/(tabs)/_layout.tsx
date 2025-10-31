@@ -1,4 +1,3 @@
-
 import {
   View,
   Text,
@@ -14,30 +13,35 @@ import { useEffect, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/src/providers/AuthProvider";
 
-// Tách header thành một component riêng
 function CustomHeader() {
   const pathname = usePathname();
   const { user } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    fadeAnim.setValue(0); 
+    fadeAnim.setValue(0);
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 400,
       useNativeDriver: true,
-    }).start(); 
+    }).start();
   }, [pathname]);
 
   const getHeaderContent = () => {
     switch (true) {
       case pathname.includes("courses"):
-        return { title: "Your Courses 📚", subtitle: "Continue where you left off" };
+        return {
+          title: "Your Courses 📚",
+          subtitle: "Continue where you left off",
+        };
       case pathname.includes("community"):
         return { title: "Community 💬", subtitle: "Connect & share ideas" };
       case pathname.includes("my-learning"):
         return { title: "My Learning 🎓", subtitle: "Keep up your progress" };
-      case pathname.includes("profile"):
-        return { title: user?.name || "Profile", subtitle: "Manage your account" };
+      case pathname.includes("settings"):
+        return {
+          title: user?.name || "Setting",
+          subtitle: "Manage your account",
+        };
       default:
         return {
           title: user ? `Hi, ${user.name} 👋` : "Hi there 👋",
@@ -60,9 +64,14 @@ function CustomHeader() {
           styles.headerContent,
           {
             opacity: fadeAnim,
-            transform: [{
-              translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [5, 0] }),
-            }],
+            transform: [
+              {
+                translateY: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [5, 0],
+                }),
+              },
+            ],
           },
         ]}
       >
@@ -77,7 +86,9 @@ function CustomHeader() {
           </TouchableOpacity>
           <TouchableOpacity>
             <Image
-              source={{ uri: user?.imageUrl || "https://i.pravatar.cc/150?img=12" }}
+              source={{
+                uri: user?.imageUrl || "https://i.pravatar.cc/150?img=12",
+              }}
               style={styles.avatar}
             />
           </TouchableOpacity>
@@ -100,9 +111,9 @@ export default function TabsLayout() {
           fontWeight: "500",
         },
         tabBarStyle: {
-          height: Platform.OS === 'android' ? 100 : 100, 
-          paddingBottom: Platform.OS === 'android' ? 10 : 30, 
-          paddingTop: 10, 
+          height: Platform.OS === "android" ? 100 : 100,
+          paddingBottom: Platform.OS === "android" ? 10 : 30,
+          paddingTop: 10,
           borderTopWidth: 0,
           elevation: 5,
           backgroundColor: "#fff",
@@ -162,12 +173,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile/index"
+        name="settings/index"
         options={{
-          title: "Profile",
+          title: "Setting",
           tabBarIcon: ({ focused }) => (
             <Ionicons
-              name={focused ? "person" : "person-outline"}
+              name={focused ? "settings" : "settings-outline"}
               size={24}
               color={focused ? "#1e40af" : "#64748b"}
             />
