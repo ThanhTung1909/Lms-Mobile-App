@@ -16,7 +16,7 @@ import { useAuth } from "@/src/providers/AuthProvider";
 export default function LoginScreen() {
   const router = useRouter();
 
-  const { login, isLoading, error } = useAuth();
+  const { login, isAuthenticating, error } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -132,9 +132,9 @@ export default function LoginScreen() {
         {/* Sign In Button */}
         <TouchableOpacity
           onPress={handleLogin}
-          disabled={isLoading}
+          disabled={isAuthenticating}
           style={{
-            backgroundColor: isLoading ? "#ccc" : "#001f54",
+            backgroundColor: isAuthenticating ? "#ccc" : "#001f54",
             borderRadius: 8,
             paddingVertical: 14,
             alignItems: "center",
@@ -142,7 +142,7 @@ export default function LoginScreen() {
             justifyContent: "center",
           }}
         >
-          {isLoading ? (
+          {isAuthenticating ? (
             <ActivityIndicator
               size="small"
               color="#fff"

@@ -5,16 +5,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Alert
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { dummyCourses, dummyEducatorData, dummyStudentEnrolled } from "@/src/assets/assets";
+import { dummyCourses, dummyEducatorData, allUsers } from "@/src/assets/assets";
+import { useAuth } from "@/src/providers/AuthProvider";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import RenderHtml from "react-native-render-html";
 import { useState } from "react";
 import { Course } from "@/src/types/course";
-import { Colors, Spacing } from "@/src/constants/theme"; 
+import { Colors, Spacing } from "@/src/constants/theme";
 import CoursePreview from "@/src/components/specific/CoursePreview";
 
 const { width } = Dimensions.get("window");
@@ -24,9 +26,13 @@ export default function CourseDetail() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
 
+  const { user } = useAuth();
+
   const course: Course | undefined = dummyCourses.find(
     (item) => item._id === id,
   );
+
+  const educator = allUsers.find((u) => u._id === course?.educator);
 
   if (!course) {
     return (
@@ -128,11 +134,13 @@ export default function CourseDetail() {
             <Text style={styles.sectionTitle}>Student Feedback</Text>
             {course.courseRatings?.length ? (
               course.courseRatings.map((r, i) => {
-                const studentInfo = dummyStudentEnrolled.find(
-                  (enrollment) => enrollment.student._id === r.userId
-                );
-                const studentName = studentInfo ? studentInfo.student.name : "Anonymous Student";
-                const studentImageUrl = studentInfo ? studentInfo.student.imageUrl : null;
+                const studentInfo = allUsers.find((u) => u._id === r.userId);
+                const studentName = studentInfo
+                  ? studentInfo.name
+                  : "Anonymous Student";
+                const studentImageUrl = studentInfo
+                  ? studentInfo.imageUrl
+                  : null;
 
                 return (
                   <View key={r._id || i} style={styles.reviewBox}>
@@ -142,16 +150,20 @@ export default function CourseDetail() {
                         style={styles.reviewAvatar}
                       />
                     ) : (
-                      <View style={[styles.reviewAvatar, styles.avatarFallback]}>
-                        <Ionicons name="person" size={24} color={Colors.light.textSecondary} />
+                      <View
+                        style={[styles.reviewAvatar, styles.avatarFallback]}
+                      >
+                        <Ionicons
+                          name="person"
+                          size={24}
+                          color={Colors.light.textSecondary}
+                        />
                       </View>
                     )}
 
                     <View>
                       <Text style={styles.reviewText}>{studentName}</Text>
-                      <Text style={styles.reviewRating}>
-                        ⭐ {r.rating} / 5
-                      </Text>
+                      <Text style={styles.reviewRating}>⭐ {r.rating} / 5</Text>
                     </View>
                   </View>
                 );
@@ -166,6 +178,46 @@ export default function CourseDetail() {
       default:
         return null;
     }
+  };
+
+  const renderEnrollBar = () => {
+   
+    if (user?.role === 'educator' && user._id === course.educator) {
+      return (
+        <TouchableOpacity style={styles.enrollBtn} onPress={() => Alert.alert("Navigate to Edit Screen")}>
+          <Text style={styles.enrollText}>Edit Course</Text>
+        </TouchableOpacity>
+      );
+    }
+    
+    
+    const isEnrolled = course.enrolledStudents?.includes(user?._id || '');
+    if (user?.role === 'student' && isEnrolled) {
+      return (
+        <TouchableOpacity style={styles.enrollBtn} onPress={() => Alert.alert("Navigate to Learning Screen")}>
+          <Text style={styles.enrollText}>Go to Course</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    
+    return (
+      <TouchableOpacity 
+          style={styles.enrollBtn}
+          onPress={() => {
+            if (user) { 
+              router.push({
+                pathname: "/(stack)/courses/enroll/[id]",
+                params: { id: course._id }
+              });
+            } else { 
+              router.replace("/(auth)/login");
+            }
+          }}
+      >
+        <Text style={styles.enrollText}>Enroll Now</Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -186,19 +238,20 @@ export default function CourseDetail() {
 
         <View style={styles.infoContainer}>
           <Text style={styles.title}>{course.courseTitle}</Text>
-
-          <View style={styles.educatorRow}>
-            <Image
-              source={{ uri: dummyEducatorData.imageUrl }}
-              style={styles.avatar}
-            />
-            <View>
-              <Text style={styles.educatorName}>{dummyEducatorData.name}</Text>
-              <Text style={styles.educatorEmail}>
-                {dummyEducatorData.email}
-              </Text>
+          {educator && (
+            <View style={styles.educatorRow}>
+              <Image
+                source={{ uri: educator.imageUrl }}
+                style={styles.avatar}
+              />
+              <View>
+                <Text style={styles.educatorName}>{educator.name}</Text>
+                <Text style={styles.educatorEmail}>
+                  {educator.email}
+                </Text>
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         {renderTabs()}
@@ -210,9 +263,7 @@ export default function CourseDetail() {
           <Text style={styles.price}>${discountedPrice}</Text>
           <Text style={styles.oldPrice}>${course.coursePrice}</Text>
         </View>
-        <TouchableOpacity style={styles.enrollBtn}>
-          <Text style={styles.enrollText}>Enroll Now</Text>
-        </TouchableOpacity>
+        {renderEnrollBar()}
       </View>
     </SafeAreaView>
   );
@@ -227,7 +278,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
 
-  header: { height: 230, backgroundColor: "#1e293b" }, 
+  header: { height: 230, backgroundColor: "#1e293b" },
   backBtn: {
     position: "absolute",
     top: 50,
@@ -327,8 +378,8 @@ const styles = StyleSheet.create({
   },
   avatarFallback: {
     backgroundColor: Colors.light.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   enrollBar: {

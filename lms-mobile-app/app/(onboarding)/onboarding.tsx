@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/src/providers/AuthProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ONBOARDING_KEY = "hasOnboarded";
@@ -55,18 +56,16 @@ const slides = [
 export default function Onboarding() {
   const { width } = useWindowDimensions();
   const router = useRouter();
+
+  const { completeOnboarding } = useAuth();
+
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleCompleteOnboarding = async (route: string) => {
-    try {
-      await AsyncStorage.setItem(ONBOARDING_KEY, "true");
-      router.replace(route as any);
-    } catch (e) {
-      console.error("Failed to save onboarding status", e);
-      router.replace(route as any);
-    }
+    await completeOnboarding();
+    router.replace(route as any);
   };
 
   // Khi người dùng scroll bằng tay

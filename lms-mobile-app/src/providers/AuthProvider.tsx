@@ -1,81 +1,93 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { User } from "@/src/types/user";
+import { allUsers } from "@/src/assets/assets";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { dummyEducatorData } from "@/src/assets/assets";
 
-type User = typeof dummyEducatorData;
+const ONBOARDING_KEY = "hasOnboarded";
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
+  isOnboarded: boolean | null;
+  isAppLoading: boolean; 
+  isAuthenticating: boolean; 
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
+  logout: () => void;
+  completeOnboarding: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
 
-  //Load user từ AsyncStorage khi app khởi động
   useEffect(() => {
-    const loadUser = async () => {
+    const loadInitialState = async () => {
       try {
-        const savedUser = await AsyncStorage.getItem("user");
-        if (savedUser) {
-          setUser(JSON.parse(savedUser));
-        }
+        const onboardedStatus = await AsyncStorage.getItem(ONBOARDING_KEY);
+        setIsOnboarded(onboardedStatus === "true");
+        // kiểm tra token đăng nhập ở đây
       } catch (e) {
-        console.error("Error loading user:", e);
+        console.error("Failed to load initial state", e);
+        setIsOnboarded(false);
       } finally {
-        setIsLoading(false);
+        setIsAppLoading(false);
       }
     };
-    loadUser();
+    loadInitialState();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
     setError(null);
+    setIsAuthenticating(true);
+
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const foundUser = allUsers.find(
+          (u) => u.email.toLowerCase() === email.toLowerCase(),
+        );
+        if (foundUser && password === "password123") {
+          setUser(foundUser);
+          setIsAuthenticating(false);
+          resolve(true);
+        } else {
+          setError("Invalid email or password.");
+          setIsAuthenticating(false);
+          resolve(false);
+        }
+      }, 1000);
+    });
+  };
+
+  const logout = () => {
+    setUser(null);
+  };
+
+  const completeOnboarding = async () => {
     try {
-      if (!email.trim() || !password.trim()) {
-        setError("Please enter both email and password.");
-        return false;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      if (
-        email.toLowerCase() === dummyEducatorData.email.toLowerCase() &&
-        password === "password123"
-      ) {
-        setUser(dummyEducatorData);
-        await AsyncStorage.setItem("user", JSON.stringify(dummyEducatorData)); //lưu lại user
-        return true;
-      } else {
-        setError("Invalid email or password. Please try again.");
-        return false;
-      }
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
-      return false;
-    } finally {
-      setIsLoading(false);
+      await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+      setIsOnboarded(true);
+    } catch (e) {
+      console.error("Failed to complete onboarding", e);
     }
   };
 
-  const logout = async () => {
-    setUser(null);
-    await AsyncStorage.removeItem("user"); //xóa user khỏi bộ nhớ
+  const value = {
+    user,
+    isOnboarded,
+    isAppLoading,
+    isAuthenticating,
+    error,
+    login,
+    logout,
+    completeOnboarding,
   };
 
-  return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

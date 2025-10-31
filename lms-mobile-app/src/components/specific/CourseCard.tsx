@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Course } from "@/src/types/course";
-import { dummyEducatorData } from "@/src/assets/assets";
+import { allUsers } from "@/src/assets/assets";
 
 type CourseCardProps = {
   item: Course;
@@ -12,7 +12,8 @@ type CourseCardProps = {
 
 const CourseCard: React.FC<CourseCardProps> = ({ item }) => {
   const router = useRouter();
-  const educator = dummyEducatorData
+  const educator = allUsers.find(u => u._id === item.educator);
+  const instructorName = educator ? educator.name : "Unknown Instructor";
 
   const avgRating =
     item.courseRatings && item.courseRatings.length > 0
@@ -28,13 +29,14 @@ const CourseCard: React.FC<CourseCardProps> = ({ item }) => {
     ? item.coursePrice * (1 - item.discount / 100)
     : item.coursePrice;
 
-  const instructor = educator.name || "Richard James";
-
   return (
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.8}
-      onPress={() => router.push(`/(stack)/courses/${item._id}`)}
+      onPress={() => router.push({
+        pathname: "/(stack)/courses/[id]",
+        params: { id: item._id }
+      })}
     >
       <Image
         source={{
@@ -50,7 +52,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item }) => {
         <Text numberOfLines={2} style={styles.title}>
           {item.courseTitle}
         </Text>
-        <Text style={styles.instructor}>{instructor}</Text>
+        <Text style={styles.instructor}>{instructorName}</Text>
 
         <View style={styles.row}>
           <View style={styles.ratingRow}>

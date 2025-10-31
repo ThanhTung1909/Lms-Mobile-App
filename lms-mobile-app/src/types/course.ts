@@ -15,6 +15,7 @@ export type Chapter = {
   chapterContent: Lecture[];
 };
 
+
 export type Rating = {
   userId: string;
   rating: number;
@@ -27,13 +28,13 @@ export type Course = {
   courseThumbnail: string;
   courseDescription: string;
   coursePrice: number;
-  isPublished: boolean; 
+  isPublished: boolean;
   discount?: number;
   educator: string; 
-  enrolledStudents?: string[];
-  courseContent: Chapter[]; 
-  courseRatings?: Rating[]; 
+  enrolledStudents?: string[]; 
+  courseContent: Chapter[];
+  courseRatings?: Rating[];
   createdAt: string; 
-  updatedAt: string;
+  updatedAt: string; 
   __v?: number;
 };
