@@ -27,7 +27,15 @@ const TeacherCard: React.FC<{ item: Teacher }> = ({ item }) => {
 export default function TeacherList({ title, data, onViewMore }: TeacherListProps) {
     return (
         <View style={styles.container}>
-
+            <SectionHeader title={title} onViewMore={onViewMore} />
+            <FlatList
+                data={data}
+                renderItem={({ item }) => <TeacherCard item={item} />}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.listContent}
+            />
         </View>
     );
 }
