@@ -1,4 +1,3 @@
-// app/(tabs)/courses/lesson/[lessonId].tsx
 import { View, Text, StyleSheet } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 

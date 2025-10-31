@@ -1,7 +1,9 @@
 import { Slot, useRouter, useRootNavigationState } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+
 
 export default function RootLayout() {
   const router = useRouter();
@@ -18,7 +20,6 @@ export default function RootLayout() {
       setIsAuthenticated(false);
       setLoading(false);
     }, 1000);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -39,7 +40,7 @@ export default function RootLayout() {
   if (loading || !rootNavigation?.key) {
     return (
       <SafeAreaProvider>
-        <View
+        <SafeAreaView
           style={{
             flex: 1,
             justifyContent: "center",
@@ -48,14 +49,18 @@ export default function RootLayout() {
           }}
         >
           <ActivityIndicator size="large" />
-        </View>
+          <StatusBar style="dark" />
+        </SafeAreaView>
       </SafeAreaProvider>
     );
   }
 
   return (
     <SafeAreaProvider>
-      <Slot />
+      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
+        <Slot />
+        <StatusBar style="auto" />
+      </SafeAreaView>
     </SafeAreaProvider>
   );
 }
