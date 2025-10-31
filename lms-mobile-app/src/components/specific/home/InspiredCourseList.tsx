@@ -28,7 +28,24 @@ const InspiredCourseCard: React.FC<{ item: Course }> = ({ item }) => {
             style={[styles.cardContainer, { borderColor: borderColor }]}
             onPress={() => router.push(`/(tabs)/courses/${item.id}`)}
         >
-            {/*  */}
+            <Image source={{ uri: item.image || '' }} style={styles.cardImage} />
+            <View style={styles.cardInfo}>
+                <ThemedText style={styles.cardTitle} numberOfLines={1}>{item.title}</ThemedText>
+                <ThemedText style={[styles.cardStats, { color: secondaryColor }]}>
+                    <Ionicons name="star" size={14} color="#FFC107" /> {item.rating} ({item.students})
+                </ThemedText>
+                <ThemedText style={[styles.cardStats, { color: secondaryColor }]}>
+                    {item.lessons} lessons
+                </ThemedText>
+            </View>
+            <View style={styles.cardRight}>
+                <ThemedText style={[styles.cardPrice, { color: priceColor }]}>
+                    ${item.price}
+                </ThemedText>
+                <TouchableOpacity>
+                    <Ionicons name="bookmark-outline" size={20} color={secondaryColor} />
+                </TouchableOpacity>
+            </View>
         </TouchableOpacity>
     );
 };
@@ -37,7 +54,12 @@ export default function InspiredCourseList({ title, data, onViewMore }: Inspired
 
     return (
         <View style={styles.container}>
-
+            <SectionHeader title={title} onViewMore={onViewMore} />
+            <View style={styles.listContainer}>
+                {data.map((item) => (
+                    <InspiredCourseCard key={item.id} item={item} />
+                ))}
+            </View>
         </View>
     );
 }
