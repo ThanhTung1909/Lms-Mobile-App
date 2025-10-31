@@ -10,11 +10,26 @@ interface HomeHeaderProps {
 }
 
 export default function HomeHeader({ userName }: HomeHeaderProps) {
-    // const iconColor = useThemeColor({}, 'icon');
-    // const secondaryTextColor = useThemeColor({}, 'icon');
+    const iconColor = useThemeColor({}, 'icon');
+    const secondaryTextColor = useThemeColor({}, 'icon');
 
     return (
-        <></>
+        <ThemedView style={styles.container}>
+            <View>
+                <ThemedText style={styles.greeting}>Hello, {userName}!</ThemedText>
+                <ThemedText style={[styles.subGreeting, { color: secondaryTextColor }]}>
+                    What do you want to learn today?
+                </ThemedText>
+            </View>
+            <View style={styles.iconsContainer}>
+                <TouchableOpacity style={styles.iconButton}>
+                    <Ionicons name="cart-outline" size={24} color={iconColor} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.iconButton}>
+                    <Ionicons name="notifications-outline" size={24} color={iconColor} />
+                </TouchableOpacity>
+            </View>
+        </ThemedView>
     );
 }
 
