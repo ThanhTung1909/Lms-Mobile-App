@@ -1,7 +1,138 @@
-import { Link } from "expo-router";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { dummyCourses, dummyTestimonial } from "@/src/assets/assets";
+import CourseCard from "@/src/components/specific/CourseCard";
 
 export default function CoursesScreen() {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  const filteredCourses = dummyCourses
+
+  const filters = ["All", "Top Rated", "Popular"];
   return (
-    <Link href="/(tabs)/courses/123">Go to Course 123</Link>
+    <SafeAreaView style={styles.container}>
+      {/* Search bar */}
+      <View style={styles.searchSection}>
+        <Ionicons name="search-outline" size={20} color="#555" />
+        <TextInput
+          placeholder="Search courses..."
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
+
+      {/* Filters */}
+      <View style={styles.filtersRow}>
+        {filters.map((item) => (
+          <TouchableOpacity
+            key={item}
+            style={[
+              styles.filterBtn,
+              filter === item && styles.filterBtnActive,
+            ]}
+            onPress={() => setFilter(item)}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filter === item && styles.filterTextActive,
+              ]}
+            >
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <FlatList
+        data={filteredCourses}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => <CourseCard item={item} />}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      />
+
+      {visibleCount < dummyCourses.length && (
+        <TouchableOpacity
+          style={styles.loadMoreBtn}
+          onPress={() => setVisibleCount((prev) => prev + 5)}
+        >
+          <Text style={styles.loadMoreText}>Load More</Text>
+        </TouchableOpacity>
+      )}
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+    paddingHorizontal: 20,
+  },
+  searchSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 12,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+    color: "#333",
+  },
+  filtersRow: {
+    flexDirection: "row",
+    marginVertical: 14,
+    gap: 10,
+  },
+  filterBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "#e2e8f0",
+  },
+  filterBtnActive: {
+    backgroundColor: "#1e3a8a",
+  },
+  filterText: {
+    fontSize: 14,
+    color: "#334155",
+    fontWeight: "500",
+  },
+  filterTextActive: {
+    color: "#fff",
+  },
+  loadMoreBtn: {
+    alignSelf: "center",
+    backgroundColor: "#1e40af",
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginBottom: 20,
+  },
+  loadMoreText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+});
