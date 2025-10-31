@@ -5,7 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Alert
+  Alert,
+  Animated
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -14,12 +15,13 @@ import { useAuth } from "@/src/providers/AuthProvider";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import RenderHtml from "react-native-render-html";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Course } from "@/src/types/course";
 import { Colors, Spacing } from "@/src/constants/theme";
 import CoursePreview from "@/src/components/specific/CoursePreview";
 
 const { width } = Dimensions.get("window");
+const HEADER_HEIGHT = 230;
 
 export default function CourseDetail() {
   const { id } = useLocalSearchParams();
@@ -27,6 +29,8 @@ export default function CourseDetail() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const { user } = useAuth();
+
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const course: Course | undefined = dummyCourses.find(
     (item) => item._id === id,
@@ -384,7 +388,7 @@ const styles = StyleSheet.create({
 
   enrollBar: {
     position: "absolute",
-    bottom: 0,
+    bottom: 30,
     width: "100%",
     backgroundColor: Colors.light.background,
     flexDirection: "row",

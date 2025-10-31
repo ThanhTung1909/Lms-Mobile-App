@@ -42,7 +42,7 @@ const initialPosts: Post[] = [
   },
 ];
 
-export default function CommunityIndex() {
+export default function CommunityScreen() {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>(initialPosts);
 

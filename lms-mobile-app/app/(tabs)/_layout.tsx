@@ -1,3 +1,4 @@
+
 import {
   View,
   Text,
@@ -5,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { Tabs, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,6 +14,7 @@ import { useEffect, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/src/providers/AuthProvider";
 
+// Tách header thành một component riêng
 function CustomHeader() {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -93,11 +96,12 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: "#94a3b8",
         tabBarLabelStyle: {
           fontSize: 12,
-          marginBottom: 4,
           fontWeight: "500",
         },
         tabBarStyle: {
-          height: 62,
+          height: Platform.OS === 'android' ? 100 : 100, 
+          paddingBottom: Platform.OS === 'android' ? 10 : 30, 
+          paddingTop: 10, 
           borderTopWidth: 0,
           elevation: 5,
           backgroundColor: "#fff",
@@ -176,7 +180,7 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   headerContainer: {
     paddingTop: 50,
-    paddingBottom: 18,
+    paddingBottom: 20,
     paddingHorizontal: 20,
   },
   headerContent: {

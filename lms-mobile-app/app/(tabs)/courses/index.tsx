@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { dummyCourses, dummyTestimonial } from "@/src/assets/assets";
 import CourseCard from "@/src/components/specific/CourseCard";
 
+const ITEM_HEIGHT = 280;
+
 export default function CoursesScreen() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -29,7 +31,7 @@ export default function CoursesScreen() {
     return () => clearTimeout(timeout);
   }, []);
 
-  const filteredCourses = dummyCourses
+  const filteredCourses = dummyCourses;
 
   const filters = ["All", "Top Rated", "Popular"];
 
@@ -89,17 +91,30 @@ export default function CoursesScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
+            { useNativeDriver: true },
           )}
           renderItem={({ item, index }) => {
             const scale = scrollY.interpolate({
-              inputRange: [-1, 0, 100 * index, 100 * (index + 2)],
+              inputRange: [
+                -1,
+                0,
+                ITEM_HEIGHT * index,
+                ITEM_HEIGHT * (index + 2),
+              ],
               outputRange: [1, 1, 1, 0.9],
+              extrapolate: "clamp", 
             });
             const opacity = scrollY.interpolate({
-              inputRange: [-1, 0, 100 * index, 100 * (index + 1)],
+              inputRange: [
+                -1,
+                0,
+                ITEM_HEIGHT * index,
+                ITEM_HEIGHT * (index + 1),
+              ],
               outputRange: [1, 1, 1, 0],
+              extrapolate: "clamp", 
             });
+
             return (
               <Animated.View
                 style={{

@@ -1,44 +1,43 @@
-import { Slot, useRouter, useRootNavigationState, usePathname } from "expo-router";
+import { Stack, useRouter, usePathname, Slot } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
+import { StatusBar } from "expo-status-bar"; 
 import { useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "@/src/providers/AuthProvider";
 
 function RootLayoutNav() {
+  const { user, isOnboarded, isAppLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const rootNavigationReady = useRootNavigationState()?.key !== undefined;
-
-  const { user, isOnboarded, isAppLoading } = useAuth();
-  const isAuthenticated = !!user;
 
   useEffect(() => {
-    if (isAppLoading || !rootNavigationReady) {
+    if (isAppLoading) {
       return;
     }
 
-    const inTabsGroup = pathname.startsWith("/(tabs)");
+    const inAuthGroup = pathname.startsWith("/(auth)");
+    const inOnboardingGroup = pathname.startsWith("/(onboarding)");
+    const inApp =
+      pathname.startsWith("/(tabs)") ||
+      pathname.startsWith("/courses") ||
+      pathname.startsWith("/enroll");
 
-    if (!isOnboarded && !pathname.startsWith("/(onboarding)")) {
+    if (!isOnboarded && !inOnboardingGroup) {
       router.replace("/(onboarding)/splash");
-
-    } else if (isOnboarded && !isAuthenticated && !pathname.startsWith("/(auth)")) {
+    } else if (isOnboarded && !user && !inAuthGroup) {
       router.replace("/(auth)/login");
-
-    } else if (isOnboarded && isAuthenticated && !inTabsGroup) {
+    } else if (isOnboarded && user && !inApp) {
       router.replace("/(tabs)/home");
     }
-  }, [rootNavigationReady, isAppLoading, isAuthenticated, isOnboarded, pathname]);
+  }, [isOnboarded, user, isAppLoading, pathname]);
 
-  if (isAppLoading || !rootNavigationReady) {
+  if (isAppLoading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#001f54" />
       </View>
     );
   }
-
   return <Slot />;
 }
 
@@ -46,13 +45,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-          <RootLayoutNav />
-          <StatusBar style="auto" />
-        </SafeAreaView>
+        <RootLayoutNav />
+        <StatusBar style="dark" />
       </SafeAreaProvider>
     </AuthProvider>
   );
 }
-
-
