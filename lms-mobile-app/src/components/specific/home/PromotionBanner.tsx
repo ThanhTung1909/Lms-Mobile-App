@@ -9,7 +9,31 @@ export default function PromotionBanner() {
 
     return (
         <View style={styles.container}>
-
+            <ImageBackground
+                source={{ uri: '' }}
+                resizeMode="cover"
+                style={styles.imageBackground}
+                imageStyle={{ borderRadius: 16 }}
+            >
+                <LinearGradient
+                    colors={[tintColor, '#3b9ec4']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.gradient}
+                >
+                    <View style={styles.content}>
+                        <View style={styles.textContainer}>
+                            <ThemedText style={styles.title}>PROJECT MANAGEMENT</ThemedText>
+                            <ThemedText style={styles.offer}>20% OFF</ThemedText>
+                        </View>
+                        <TouchableOpacity style={styles.button}>
+                            <ThemedText style={[styles.buttonText, { color: tintColor }]}>
+                                JOIN NOW
+                            </ThemedText>
+                        </TouchableOpacity>
+                    </View>
+                </LinearGradient>
+            </ImageBackground>
         </View>
     );
 }
