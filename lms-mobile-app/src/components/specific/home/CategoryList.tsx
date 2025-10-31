@@ -24,7 +24,10 @@ const CategoryItem: React.FC<{ item: Category }> = ({ item }) => {
             style={[styles.itemContainer, { borderColor }]}
             onPress={() => router.push('/(tabs)/courses')}
         >
-
+            <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+                <Ionicons name={item.iconName} size={20} color="#333" />
+            </View>
+            <ThemedText style={styles.itemText}>{item.name}</ThemedText>
         </TouchableOpacity>
     );
 };
@@ -32,7 +35,16 @@ const CategoryItem: React.FC<{ item: Category }> = ({ item }) => {
 export default function CategoryList({ data, onViewMore }: CategoryListProps) {
     return (
         <View style={styles.container}>
-
+            <SectionHeader title="Categories" onViewMore={onViewMore} />
+            <FlatList
+                data={data}
+                renderItem={({ item }) => <CategoryItem item={item} />}
+                keyExtractor={(item) => item.id}
+                numColumns={2}
+                scrollEnabled={false}
+                columnWrapperStyle={styles.row}
+                contentContainerStyle={{ paddingHorizontal: 12 }}
+            />
         </View>
     );
 }
