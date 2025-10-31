@@ -1,32 +1,93 @@
-import React from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList } from 'react-native';
+// Vị trí: app/(tabs)/courses/index.tsx
+
+import React, { useState } from 'react';
+import { StyleSheet, View, TouchableOpacity, FlatList, ScrollView } from 'react-native';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
+// Các component chung
 import SearchBar from '@/components/common/SearchBar';
 import CourseRowCard from '@/components/common/CourseRowCard';
+import CourseList from '@/components/common/CourseList'; // Tái sử dụng từ Home
+
+// Các component mới cho màn hình này
+import HotTopics from '@/components/specific/courses/HotTopics';
+import CategoryRows from '@/components/specific/courses/CategoryRows';
+
+// Types
 import { Course } from '@/types/course';
 
-const coursesData: Course[] = [
-  { id: '1', title: 'UX Foundation', author: 'Sara Weise', rating: 4.5, students: 1233, lessons: 13, image: '', price: 51, tag: 'Best-seller' },
-  { id: '2', title: 'Design Basics', author: 'Kelly Hamilton', rating: 4.5, students: 1233, lessons: 12, image: '', price: 89 },
-  { id: '3', title: 'Digital Sketching', author: 'Ramono Wulfschner', rating: 4.5, students: 1233, lessons: 8, image: '', price: 49 },
-  { id: '4', title: 'Digital Portrait', author: 'Ramono Wulfschner', rating: 4.5, students: 657, lessons: 11, image: '', price: 67 },
-  { id: '5', title: 'Web Design', author: 'Ryan Meyers', rating: 4.5, students: 1233, lessons: 12, image: '', price: 29 },
+// =================================
+// DỮ LIỆU MẪU
+// =================================
+// Dữ liệu cho "Kết quả tìm kiếm"
+const searchResultsData: Course[] = [
+  { id: '1', title: 'UX Foundation', author: 'Sara Weise', rating: 4.5, students: 1233, lessons: 13, image: 'https://i.imgur.com/E9gxL3i.png', price: 51, tag: 'Best-seller' },
+  { id: '2', title: 'Design Basics', author: 'Kelly Hamilton', rating: 4.5, students: 1233, lessons: 12, image: 'https://i.imgur.com/x0iP1Cj.png', price: 89 },
+  // ... thêm dữ liệu khác
 ];
+// Dữ liệu cho "Recommended" (khi chưa tìm kiếm)
+const recommendedData: Course[] = [
+  { id: '3', title: 'Website Design', author: 'Ramono Wulfschner', rating: 4.5, students: 1233, lessons: 9, image: 'https://i.imgur.com/q1wKdeJ.png', price: 590, tag: 'Best-seller' },
+  { id: '4', title: 'UX Research For...', author: 'Olivia Wang', rating: 4.5, students: 1782, lessons: 12, image: 'https://i.imgur.com/ybeQp3I.png', price: 290, tag: '20% OFF' },
+];
+// =================================
+
+// Component con cho trạng thái Mặc định (Chưa tìm kiếm)
+const DefaultSearchContent = () => (
+  <ScrollView showsVerticalScrollIndicator={false}>
+    <HotTopics />
+    <CategoryRows />
+    <CourseList
+      title="Recommended for you"
+      data={recommendedData}
+      onViewMore={() => router.push('/(tabs)/courses')}
+    />
+    <View style={{ height: 40 }} />
+  </ScrollView>
+);
+
+// Component con cho trạng thái Kết quả (Đã tìm kiếm)
+const SearchResultsContent = () => (
+  <>
+    <View style={styles.resultsContainer}>
+      <ThemedText style={styles.resultsText}>120 Results</ThemedText>
+    </View>
+    <FlatList
+      data={searchResultsData}
+      renderItem={({ item }) => <CourseRowCard item={item} />}
+      keyExtractor={(item) => item.id}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.listContent}
+    />
+  </>
+);
+
 
 export default function CourseListingScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const tintColor = useThemeColor({}, 'tint');
 
+  // State để quản lý việc tìm kiếm
+  const [searchText, setSearchText] = useState('');
+
+  // Quyết định hiển thị nội dung nào
+  const hasResults = searchText.length > 0;
+
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      {/* 1. Header: Search + Filter */}
+      {/* 1. Header: Search + Filter (Luôn hiển thị) */}
       <View style={styles.header}>
         <View style={styles.searchContainer}>
-          <SearchBar placeholder="Design" />
+          <SearchBar
+            placeholder="Search course"
+          // Cập nhật state khi gõ
+          // value={searchText} 
+          // onChangeText={setSearchText}
+          />
         </View>
         <TouchableOpacity style={[styles.filterButton, { backgroundColor: tintColor }]}>
           <Ionicons name="filter" size={20} color="#FFFFFF" />
@@ -34,23 +95,14 @@ export default function CourseListingScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 2. Results Count */}
-      <View style={styles.resultsContainer}>
-        <ThemedText style={styles.resultsText}>120 Results</ThemedText>
-      </View>
+      {/* 2. Nội dung thay đổi (Mặc định hoặc Kết quả) */}
+      {hasResults ? <SearchResultsContent /> : <DefaultSearchContent />}
 
-      {/* 3. List */}
-      <FlatList
-        data={coursesData}
-        renderItem={({ item }) => <CourseRowCard item={item} />}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-      />
     </ThemedView>
   );
 }
 
+// Styles (Kết hợp từ cả 2 màn hình)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -59,8 +111,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 50, // Đệm cho status bar
+    paddingTop: 50,
     paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE', // Nên dùng màu border từ theme
   },
   searchContainer: {
     flex: 1,
@@ -79,9 +133,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 6,
   },
+  // Styles cho phần kết quả
   resultsContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingVertical: 16,
   },
   resultsText: {
     fontSize: 16,
