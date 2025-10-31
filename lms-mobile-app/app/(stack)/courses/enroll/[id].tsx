@@ -27,7 +27,7 @@ export default function EnrollmentScreen() {
 
   useEffect(() => {
     if (!course || !user) return;
-    if (user.role === 'educator' && user._id === course.educator) {
+    if (user.role === "educator" && user._id === course.educator) {
       Alert.alert("Invalid Action", "You are the educator of this course.", [
         { text: "OK", onPress: () => router.back() },
       ]);
@@ -35,9 +35,11 @@ export default function EnrollmentScreen() {
     }
     const isEnrolled = course.enrolledStudents?.includes(user._id);
     if (isEnrolled) {
-      Alert.alert("Already Enrolled", "You have already enrolled in this course.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      Alert.alert(
+        "Already Enrolled",
+        "You have already enrolled in this course.",
+        [{ text: "OK", onPress: () => router.back() }],
+      );
     }
   }, [course, user, router]);
 
@@ -56,11 +58,18 @@ export default function EnrollmentScreen() {
 
   const handleEnroll = () => {
     if (!user) {
-        Alert.alert("Please Login", "You need to be logged in to enroll in a course.", [
-            { text: "Go to Login", onPress: () => router.replace('/(auth)/login') },
-            { text: "Cancel", style: 'cancel' }
-        ]);
-        return;
+      Alert.alert(
+        "Please Login",
+        "You need to be logged in to enroll in a course.",
+        [
+          {
+            text: "Go to Login",
+            onPress: () => router.replace("/(auth)/login"),
+          },
+          { text: "Cancel", style: "cancel" },
+        ],
+      );
+      return;
     }
 
     setIsLoading(true);
@@ -83,14 +92,18 @@ export default function EnrollmentScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Confirm Enrollment</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: Spacing.medium }}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Tóm tắt khóa học */}
         <View style={styles.courseCard}>
           <Image
@@ -109,7 +122,7 @@ export default function EnrollmentScreen() {
 
         {/* Chi tiết thanh toán */}
         <Text style={styles.summaryTitle}>Order Summary</Text>
-        <View style={styles.priceContainer}>
+        <View style={styles.summaryCard}>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Original Price</Text>
             <Text style={styles.priceValue}>${originalPrice.toFixed(2)}</Text>
@@ -123,14 +136,14 @@ export default function EnrollmentScreen() {
             </Text>
           </View>
           <View style={styles.divider} />
-          <View style={[styles.priceRow, { marginTop: Spacing.small }]}>
+          <View style={[styles.priceRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>${finalPrice.toFixed(2)}</Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Nút xác nhận */}
+      {/* Nút xác nhận dính ở cuối */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.confirmButton, isLoading && styles.disabledButton]}
@@ -149,69 +162,86 @@ export default function EnrollmentScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  scrollContent: {
+    padding: Spacing.medium,
+    paddingBottom: 120,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: Spacing.medium,
+    paddingHorizontal: Spacing.medium,
+    paddingVertical: Spacing.small,
+    backgroundColor: Colors.light.background,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.borderColor,
   },
-  headerTitle: { fontSize: 20, fontWeight: "600", color: Colors.light.text },
+  headerTitle: { fontSize: 20, fontWeight: "bold", color: Colors.light.text },
   courseCard: {
     flexDirection: "row",
-    backgroundColor: Colors.light.lightGray,
-    borderRadius: 12,
+    backgroundColor: Colors.light.background,
+    borderRadius: 16,
     padding: Spacing.medium,
+    alignItems: "center",
     gap: Spacing.medium,
+    borderWidth: 1,
+    borderColor: Colors.light.borderColor,
   },
-  thumbnail: { width: 80, height: 80, borderRadius: 8 },
-  courseInfo: { flex: 1, justifyContent: "center" },
-  courseTitle: { fontSize: 16, fontWeight: "600", color: Colors.light.text },
+  thumbnail: { width: 64, height: 64, borderRadius: 8 },
+  courseInfo: { flex: 1 },
+  courseTitle: { fontSize: 17, fontWeight: "600", color: Colors.light.text },
   enrolledText: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.light.textSecondary,
     marginTop: 4,
   },
   summaryTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "bold",
     color: Colors.light.text,
     marginTop: Spacing.large,
     marginBottom: Spacing.medium,
   },
-  priceContainer: {
+  summaryCard: {
+    backgroundColor: Colors.light.background,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.light.borderColor,
-    borderRadius: 12,
-    padding: Spacing.medium,
+    paddingHorizontal: Spacing.medium,
   },
   priceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: Spacing.medium,
+    alignItems: "center",
+    paddingVertical: Spacing.medium,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.borderColor,
   },
-  priceLabel: { fontSize: 15, color: Colors.light.textSecondary },
-  priceValue: { fontSize: 15, color: Colors.light.text, fontWeight: "500" },
+  priceLabel: { fontSize: 16, color: Colors.light.textSecondary },
+  priceValue: { fontSize: 16, color: Colors.light.text, fontWeight: "500" },
   priceValueDiscount: {
-    fontSize: 15,
+    fontSize: 16,
     color: Colors.common.success,
-    fontWeight: "500",
+    fontWeight: "600",
   },
-  divider: { height: 1, backgroundColor: Colors.light.borderColor },
+  totalRow: {
+    borderBottomWidth: 0,
+  },
   totalLabel: { fontSize: 18, fontWeight: "bold", color: Colors.light.text },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: Colors.common.primary,
-  },
+  totalValue: { fontSize: 22, fontWeight: "bold", color: "#0052cc" },
+  divider: {},
   footer: {
+    position: "absolute",
+    bottom: 15,
+    left: 0,
+    right: 0,
     padding: Spacing.medium,
+    paddingBottom: Spacing.large,
+    backgroundColor: Colors.light.background,
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderColor,
-    backgroundColor: Colors.light.background,
   },
   confirmButton: {
     backgroundColor: Colors.common.primary,

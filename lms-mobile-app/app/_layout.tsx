@@ -18,16 +18,19 @@ function RootLayoutNav() {
     const inAuthGroup = pathname.startsWith("/(auth)");
     const inOnboardingGroup = pathname.startsWith("/(onboarding)");
     const inApp =
-      pathname.startsWith("/(tabs)") ||
-      pathname.startsWith("/courses") ||
-      pathname.startsWith("/enroll");
+      pathname.startsWith("/(tabs)")
 
     if (!isOnboarded && !inOnboardingGroup) {
       router.replace("/(onboarding)/splash");
-    } else if (isOnboarded && !user && !inAuthGroup) {
+      return
+    } 
+    if (isOnboarded && !user && !inAuthGroup) {
       router.replace("/(auth)/login");
-    } else if (isOnboarded && user && !inApp) {
+      return
+    } 
+    if (isOnboarded && user && (inAuthGroup || inOnboardingGroup)) {
       router.replace("/(tabs)/home");
+      return;
     }
   }, [isOnboarded, user, isAppLoading, pathname]);
 

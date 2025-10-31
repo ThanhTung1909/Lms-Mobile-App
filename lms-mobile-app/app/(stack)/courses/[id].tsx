@@ -193,12 +193,17 @@ export default function CourseDetail() {
         </TouchableOpacity>
       );
     }
-    
-    
     const isEnrolled = course.enrolledStudents?.includes(user?._id || '');
+    
     if (user?.role === 'student' && isEnrolled) {
       return (
-        <TouchableOpacity style={styles.enrollBtn} onPress={() => Alert.alert("Navigate to Learning Screen")}>
+        <TouchableOpacity 
+            style={styles.enrollBtn} 
+            onPress={() => router.push({
+                pathname: "/(stack)/courses/lesson/[id]",
+                params: { id: course._id }
+            })}
+        >
           <Text style={styles.enrollText}>Go to Course</Text>
         </TouchableOpacity>
       );

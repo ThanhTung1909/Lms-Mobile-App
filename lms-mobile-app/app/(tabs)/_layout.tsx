@@ -20,11 +20,12 @@ function CustomHeader() {
   const { user } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    fadeAnim.setValue(0); 
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 400,
       useNativeDriver: true,
-    }).start(() => fadeAnim.setValue(0));
+    }).start(); 
   }, [pathname]);
 
   const getHeaderContent = () => {
@@ -58,7 +59,7 @@ function CustomHeader() {
         style={[
           styles.headerContent,
           {
-            opacity: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+            opacity: fadeAnim,
             transform: [{
               translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [5, 0] }),
             }],
