@@ -3,10 +3,10 @@
   "compilerOptions": {
     "strict": true,
     "allowJs": true,
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
-    },
-    "baseUrl": "."
+      "@/*": ["./src/*"]
+    }
   },
   "include": [
     "**/*.ts",

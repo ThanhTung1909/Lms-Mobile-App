@@ -9,7 +9,7 @@ export default function Login() {
   };
 
   return (
-    <View>
+    <View style={{ marginTop: 50 }}>
       <Text>Login Screen</Text>
       <Button title="Đăng Nhập" onPress={handleLoginSuccess} />
       <Button title="Đăng ký" onPress={() => router.push("/(auth)/signup")} />

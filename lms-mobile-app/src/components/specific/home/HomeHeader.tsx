@@ -1,0 +1,44 @@
+import React from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { Ionicons } from '@expo/vector-icons';
+
+interface HomeHeaderProps {
+    userName: string;
+}
+
+export default function HomeHeader({ userName }: HomeHeaderProps) {
+    // const iconColor = useThemeColor({}, 'icon');
+    // const secondaryTextColor = useThemeColor({}, 'icon');
+
+    return (
+        <></>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 50,
+        paddingBottom: 20,
+    },
+    greeting: {
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    subGreeting: {
+        fontSize: 14,
+        marginTop: 4,
+    },
+    iconsContainer: {
+        flexDirection: 'row',
+    },
+    iconButton: {
+        marginLeft: 16,
+    },
+});
