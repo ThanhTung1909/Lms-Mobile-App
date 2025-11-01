@@ -200,7 +200,7 @@ export default function CourseDetail() {
         <TouchableOpacity 
             style={styles.enrollBtn} 
             onPress={() => router.push({
-                pathname: "/(stack)/courses/lesson/[id]",
+                pathname: "/(tabs)/my-learning/lesson/[id]",
                 params: { id: course._id }
             })}
         >
@@ -216,7 +216,7 @@ export default function CourseDetail() {
           onPress={() => {
             if (user) { 
               router.push({
-                pathname: "/(stack)/courses/enroll/[id]",
+                pathname: "/(tabs)/courses/enroll/[id]",
                 params: { id: course._id }
               });
             } else { 

@@ -34,7 +34,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item }) => {
       style={styles.card}
       activeOpacity={0.8}
       onPress={() => router.push({
-        pathname: "/(stack)/courses/[id]",
+        pathname: "/(tabs)/courses/[id]",
         params: { id: item._id }
       })}
     >

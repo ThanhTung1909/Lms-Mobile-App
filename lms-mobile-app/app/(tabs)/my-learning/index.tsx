@@ -77,7 +77,7 @@
               <TouchableOpacity
                 onPress={() =>
                   router.push({
-                    pathname: "/(stack)/courses/lesson/[id]",
+                    pathname: "/(tabs)/my-learning/lesson/[id]",
                     params: { id: course._id },
                   })
                 }
