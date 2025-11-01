@@ -42,6 +42,7 @@ import profile_img from "./profile_img.png";
 import profile_img2 from "./profile_img2.png";
 import profile_img3 from "./profile_img3.png";
 import lesson_icon from "./lesson_icon.svg";
+import { Notification } from "../types/notification";
 
 export const assets = {
   logo,
@@ -122,7 +123,7 @@ export const allUsers = [
     imageUrl: "https://i.pravatar.cc/150?u=user_student_03",
     role: "student",
   },
-]as const;
+] as const;
 
 export const dummyEducatorData = allUsers[0];
 
@@ -153,9 +154,7 @@ export const dummyTestimonial = [
   },
 ];
 
-export const dummyStudents = allUsers.filter(
-  (u) => u.role === "student",
-);
+export const dummyStudents = allUsers.filter((u) => u.role === "student");
 export const dummyCourses = [
   {
     _id: "605c72efb3f1c2b1f8e4e1a1",
@@ -686,5 +685,53 @@ export const dummyCourses = [
     updatedAt: "2025-01-02T06:56:13.208Z",
     __v: 1,
     courseThumbnail: "https://img.youtube.com/vi/WbV3zRgpw_E/maxresdefault.jpg",
+  },
+];
+
+export const dummyNotifications: Notification[] = [
+  {
+    id: "1",
+    userId: "user_student_01",
+    type: "reminder",
+    title: "Sắp đến hạn bài tập",
+    message: "Bài tập cuối kỳ môn 'React Native' sẽ hết hạn trong 2 ngày nữa.",
+    timestamp: "2 giờ trước",
+    isRead: false,
+  },
+  {
+    id: "2",
+    userId: "user_student_01",
+    type: "announcement",
+    title: "Khóa học mới đã ra mắt!",
+    message: "Khám phá khóa học 'TypeScript Nâng Cao' vừa được thêm vào.",
+    timestamp: "12 giờ trước",
+    isRead: false,
+  },
+  {
+    id: "3",
+    userId: "user_student_01",
+    type: "grade",
+    title: "Đã có điểm bài kiểm tra",
+    message: "Bạn đạt 8.5/10 điểm cho bài kiểm tra giữa kỳ môn 'JavaScript'.",
+    timestamp: "1 ngày trước",
+    isRead: true,
+  },
+  {
+    id: "4",
+    userId: "user_student_01",
+    type: "message",
+    title: "Giảng viên đã trả lời",
+    message: "DinoTimo đã trả lời câu hỏi của bạn trong diễn đàn khóa học.",
+    timestamp: "2 ngày trước",
+    isRead: true,
+  },
+  {
+    id: "5",
+    userId: "user_student_01",
+    type: "reminder",
+    title: "Đừng quên buổi học trực tiếp",
+    message: "Buổi Q&A với giảng viên sẽ bắt đầu lúc 7:00 tối nay.",
+    timestamp: "3 ngày trước",
+    isRead: true,
   },
 ];

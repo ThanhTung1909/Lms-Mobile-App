@@ -7,15 +7,18 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { Tabs, usePathname } from "expo-router";
+import { Tabs, usePathname, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/src/providers/AuthProvider";
 
+
 function CustomHeader() {
   const pathname = usePathname();
   const { user } = useAuth();
+
+  const router = useRouter()
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -81,7 +84,11 @@ function CustomHeader() {
         </View>
 
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconBtn}>
+          <TouchableOpacity
+          onPress={() => 
+              router.push("/settings/notifications") 
+            }
+          style={styles.iconBtn}>
             <Ionicons name="notifications-outline" size={22} color="#1e3a8a" />
           </TouchableOpacity>
           <TouchableOpacity>
@@ -215,6 +222,13 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="community/create-post"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="settings/notifications"
         options={{
           href: null,
           headerShown: false,
