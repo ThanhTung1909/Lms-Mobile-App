@@ -3,17 +3,14 @@ import {
   View,
   Text,
   TextInput,
-  FlatList,
   TouchableOpacity,
   Animated,
-  ActivityIndicator,
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { dummyCourses, dummyTestimonial } from "@/src/assets/assets";
+import { dummyCourses } from "@/src/assets/assets";
 import CourseCard from "@/src/components/specific/CourseCard";
 
 const ITEM_HEIGHT = 280;
