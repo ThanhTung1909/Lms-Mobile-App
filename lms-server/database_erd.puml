@@ -1,0 +1,129 @@
+' --- Entities ---
+entity User {
+user_id : UUID
+--
+full_name : string
+email : string
+password_hash : string
+avatar_url : string
+' role has been moved to a separate table
+status: string ' active, inactive, banned
+email_verified_at : datetime
+last_login_at : datetime
+created_at : datetime
+updated_at : datetime
+}
+entity Role {
+role_id : INT (PK)
+--
+name : string ' student, educator, admin
+}
+entity Course {
+course_id : UUID
+--
+<b>creator_id : UUID (FK to User)</b>
+title : string
+description : text
+price : decimal
+discount : decimal
+thumbnail_url : string
+status: string ' draft, published, archived
+created_at : datetime
+updated_at : datetime
+}
+entity Category {
+category_id : UUID
+--
+name : string
+slug : string
+}
+entity Chapter {
+chapter_id : UUID
+--
+<b>course_id : UUID (FK to Course)</b>
+title : string
+order_index : int
+}
+entity Lecture {
+lecture_id : UUID
+--
+<b>chapter_id : UUID (FK to Chapter)</b>
+title : string
+video_url : string
+content : text ' For text-based lectures, articles
+duration : int
+<b>lecture_type: string</b> ' video, text, quiz, attachment
+<b>order_index : int</b>
+}
+entity Enrollment {
+enrollment_id : UUID
+--
+<b>user_id : UUID (FK to User)</b>
+<b>course_id : UUID (FK to Course)</b>
+<b>price_paid : decimal</b>
+enrolled_at : datetime
+}
+entity CourseRating {
+rating_id : UUID
+--
+<b>user_id : UUID (FK to User)</b>
+<b>course_id : UUID (FK to Course)</b>
+rating : int
+comment : text
+created_at : datetime
+}
+entity UserProgress {
+progress_id : UUID
+--
+<b>user_id : UUID (FK to User)</b>
+<b>lecture_id : UUID (FK to Lecture)</b>
+completed_at : datetime
+}
+entity Testimonial {
+testimonial_id : UUID
+--
+<b>user_id : UUID (FK to User)</b>
+content : text
+<b>is_approved : boolean</b>
+created_at : datetime
+}
+' --- Junction Tables for Many-to-Many relationships ---
+entity UserRole {
+<b>user_id : UUID (FK to User)</b>
+<b>role_id : INT (FK to Role)</b>
+}
+entity CourseInstructor {
+<b>user_id : UUID (FK to User)</b>
+<b>course_id : UUID (FK to Course)</b>
+}
+entity CourseCategory {
+<b>course_id : UUID (FK to Course)</b>
+<b>category_id : UUID (FK to Category)</b>
+}
+' --- Relationships ---
+' User and Roles (Many-to-Many)
+User ||--|{ UserRole
+Role ||--o{ UserRole
+' User (Creator) and Course (One-to-Many)
+User ||--o{ Course : "created by"
+' User (Instructors) and Course (Many-to-Many)
+User ||--|{ CourseInstructor
+Course ||--|{ CourseInstructor
+' User and Enrollment (Many-to-Many via Enrollment table)
+User ||--|{ Enrollment
+Course ||--|{ Enrollment
+' User and Course Rating (Many-to-Many via CourseRating table)
+User ||--|{ CourseRating
+Course ||--|{ CourseRating
+' Course and Category (Many-to-Many)
+Course ||--|{ CourseCategory
+Category ||--o{ CourseCategory
+' Course, Chapter, Lecture Structure (One-to-Many hierarchy)
+Course ||--o{ Chapter
+Chapter ||--o{ Lecture
+' User Progress Tracking
+User ||--|{ UserProgress
+Lecture ||--o{ UserProgress
+' User and Testimonials (One-to-Many)
+User ||--o{ Testimonial
+@enduml
