@@ -24,6 +24,9 @@ export const register = async (req, res) => {
       passwordHash: hashedPassword,
     });
 
+    const studentRole = await db.Role.findOne({ where: { name: "student" } });
+    if (studentRole) await newUser.addRole(studentRole);
+
     return res.status(201).json({
       success: true,
       message: "Đăng ký thành công",
