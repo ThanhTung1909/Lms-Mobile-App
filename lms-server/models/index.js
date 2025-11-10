@@ -1,6 +1,5 @@
-
 import { Sequelize, DataTypes } from "sequelize";
-import sequelizeConfig from "../configs/database.js"; 
+import sequelizeConfig from "../configs/database.js";
 
 import defineUser from "./user.model.js";
 import defineRole from "./role.model.js";
@@ -28,20 +27,40 @@ db.UserProgress = defineUserProgress(sequelizeConfig);
 db.Testimonial = defineTestimonial(sequelizeConfig);
 
 // User - Role (Many-to-Many)
-db.User.belongsToMany(db.Role, { through: 'UserRole' });
-db.Role.belongsToMany(db.User, { through: 'UserRole' });
+db.User.belongsToMany(db.Role, {
+  through: "UserRole",
+  as: "roles",
+  foreignKey: "userId", 
+  otherKey: "roleId", 
+});
+
+db.Role.belongsToMany(db.User, {
+  through: "UserRole",
+  as: "users",
+  foreignKey: "roleId",
+  otherKey: "userId",
+});
 
 // User (Creator) - Course (One-to-Many)
-db.User.hasMany(db.Course, { foreignKey: 'creatorId', as: 'createdCourses' });
-db.Course.belongsTo(db.User, { foreignKey: 'creatorId', as: 'creator' });
+db.User.hasMany(db.Course, { foreignKey: "creatorId", as: "createdCourses" });
+db.Course.belongsTo(db.User, { foreignKey: "creatorId", as: "creator" });
 
 // User (Instructor) - Course (Many-to-Many)
-db.User.belongsToMany(db.Course, { through: 'CourseInstructor', as: 'instructingCourses' });
-db.Course.belongsToMany(db.User, { through: 'CourseInstructor', as: 'instructors' });
+db.User.belongsToMany(db.Course, {
+  through: "CourseInstructor",
+  as: "instructingCourses",
+});
+db.Course.belongsToMany(db.User, {
+  through: "CourseInstructor",
+  as: "instructors",
+});
 
 // User - Course (Enrollment)
-db.User.belongsToMany(db.Course, { through: db.Enrollment, as: 'enrolledCourses' });
-db.Course.belongsToMany(db.User, { through: db.Enrollment, as: 'students' });
+db.User.belongsToMany(db.Course, {
+  through: db.Enrollment,
+  as: "enrolledCourses",
+});
+db.Course.belongsToMany(db.User, { through: db.Enrollment, as: "students" });
 
 // User - Course (Rating)
 db.User.hasMany(db.CourseRating);
@@ -50,8 +69,8 @@ db.Course.hasMany(db.CourseRating);
 db.CourseRating.belongsTo(db.Course);
 
 // Course - Category (Many-to-Many)
-db.Category.belongsToMany(db.Course, { through: 'CourseCategory' });
-db.Course.belongsToMany(db.Category, { through: 'CourseCategory' });
+db.Category.belongsToMany(db.Course, { through: "CourseCategory" });
+db.Course.belongsToMany(db.Category, { through: "CourseCategory" });
 
 // Course - Chapter - Lecture (Hierarchy)
 db.Course.hasMany(db.Chapter);
@@ -61,8 +80,14 @@ db.Chapter.hasMany(db.Lecture);
 db.Lecture.belongsTo(db.Chapter);
 
 // User - Lecture (UserProgress)
-db.User.belongsToMany(db.Lecture, { through: db.UserProgress, as: 'completedLectures' });
-db.Lecture.belongsToMany(db.User, { through: db.UserProgress, as: 'completedByUsers' });
+db.User.belongsToMany(db.Lecture, {
+  through: db.UserProgress,
+  as: "completedLectures",
+});
+db.Lecture.belongsToMany(db.User, {
+  through: db.UserProgress,
+  as: "completedByUsers",
+});
 
 // User - Testimonial (One-to-Many)
 db.User.hasMany(db.Testimonial);

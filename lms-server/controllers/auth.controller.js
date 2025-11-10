@@ -90,3 +90,40 @@ export const login = async (req, res) => {
     });
   }
 };
+
+export const getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await db.User.findByPk(userId, {
+      attributes: {exclude: ['passwordHash']},
+      include: [
+        {
+          model: db.Role,
+          as: "roles",
+          attributes: ['roleId',"name"],
+          through: { attributes: [] },
+        },
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Người dùng không tồn tại",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Thông tin người dùng",
+      user: user,
+    });
+  } catch (error) {
+    console.log("Lỗi đăng ký:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
+  }
+};
