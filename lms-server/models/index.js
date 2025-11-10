@@ -11,6 +11,7 @@ import defineEnrollment from "./enrollment.model.js";
 import defineCourseRating from "./courseRating.model.js";
 import defineUserProgress from "./userProgress.model.js";
 import defineTestimonial from "./testimonial.model.js";
+import definePayment from "./payment.model.js";
 
 const db = {};
 
@@ -25,13 +26,14 @@ db.Enrollment = defineEnrollment(sequelizeConfig);
 db.CourseRating = defineCourseRating(sequelizeConfig);
 db.UserProgress = defineUserProgress(sequelizeConfig);
 db.Testimonial = defineTestimonial(sequelizeConfig);
+db.Payment = definePayment(sequelizeConfig);
 
 // User - Role (Many-to-Many)
 db.User.belongsToMany(db.Role, {
   through: "UserRole",
   as: "roles",
-  foreignKey: "userId", 
-  otherKey: "roleId", 
+  foreignKey: "userId",
+  otherKey: "roleId",
 });
 
 db.Role.belongsToMany(db.User, {
@@ -92,6 +94,14 @@ db.Lecture.belongsToMany(db.User, {
 // User - Testimonial (One-to-Many)
 db.User.hasMany(db.Testimonial);
 db.Testimonial.belongsTo(db.User);
+
+// Payment thuộc về User
+db.User.hasMany(db.Payment, { foreignKey: "userId" });
+db.Payment.belongsTo(db.User, { foreignKey: "userId" });
+
+// Payment thuộc về Course
+db.Course.hasMany(db.Payment, { foreignKey: "courseId" });
+db.Payment.belongsTo(db.Course, { foreignKey: "courseId" });
 
 db.sequelize = sequelizeConfig;
 db.Sequelize = Sequelize;
