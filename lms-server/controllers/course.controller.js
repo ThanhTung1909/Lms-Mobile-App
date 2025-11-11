@@ -311,3 +311,42 @@ export const updateCourse = async (req, res) => {
     }
 };
 
+// ============================================
+// DELETE /:id - Xóa khóa học
+// ============================================
+export const deleteCourse = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const course = await Course.findByPk(id);
+
+        if (!course) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy khóa học"
+            });
+        }
+
+        // if (course.creatorId !== req.user?.userId && req.user?.role !== 'admin') {
+        //   return res.status(403).json({
+        //     success: false,
+        //     message: "Bạn không có quyền xóa khóa học này"
+        //   });
+        // }
+
+        await course.destroy();
+
+        res.status(200).json({
+            success: true,
+            message: "Xóa khóa học thành công"
+        });
+
+    } catch (error) {
+        console.error("Error in deleteCourse:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi xóa khóa học",
+            error: error.message
+        });
+    }
+};
