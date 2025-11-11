@@ -246,3 +246,68 @@ export const createCourse = async (req, res) => {
         });
     }
 };
+
+// ============================================
+// PUT /:id - Cập nhật khóa học
+// ============================================
+export const updateCourse = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            title,
+            description,
+            price,
+            discount,
+            thumbnailUrl,
+            status,
+            categoryIds
+        } = req.body;
+
+        const course = await Course.findByPk(id);
+
+        if (!course) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy khóa học"
+            });
+        }
+
+        // if (course.creatorId !== req.user?.userId && req.user?.role !== 'admin') {
+        //   return res.status(403).json({
+        //     success: false,
+        //     message: "Bạn không có quyền cập nhật khóa học này"
+        //   });
+        // }
+
+        await course.update({
+            title: title || course.title,
+            description: description || course.description,
+            price: price !== undefined ? price : course.price,
+            discount: discount !== undefined ? discount : course.discount,
+            thumbnailUrl: thumbnailUrl || course.thumbnailUrl,
+            status: status || course.status
+        });
+
+        if (categoryIds && Array.isArray(categoryIds)) {
+            const categories = await Category.findAll({
+                where: { categoryId: categoryIds }
+            });
+            await course.setCategories(categories);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Cập nhật khóa học thành công",
+            data: course
+        });
+
+    } catch (error) {
+        console.error("Error in updateCourse:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi cập nhật khóa học",
+            error: error.message
+        });
+    }
+};
+
