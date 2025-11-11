@@ -136,3 +136,122 @@ export const updateProfile = async (req, res) => {
         });
     }
 };
+
+// ============================================
+// GET /enrolled-courses - Lấy danh sách khóa học đã đăng ký
+// ============================================
+export const getEnrolledCourses = async (req, res) => {
+    try {
+
+        let userId;
+
+        if (req.user && req.user.userId) {
+            userId = req.user.userId;
+        } else {
+            const defaultUser = await User.findOne({
+                where: { email: 'thanhtung@gmail.com' }
+            });
+            userId = defaultUser.userId;
+            console.log('Warning: Sử dụng user mặc định (chưa có auth)');
+        }
+
+        const { status, page = 1, limit = 10 } = req.query;
+
+        const offset = (page - 1) * limit;
+
+        const courseWhereConditions = {};
+        if (status) {
+            courseWhereConditions.status = status;
+        }
+
+        const enrollments = await Enrollment.findAndCountAll({
+            where: { userId },
+            include: [
+                {
+                    model: Course,
+                    where: courseWhereConditions,
+                    include: [
+                        {
+                            model: User,
+                            as: 'creator',
+                            attributes: ['userId', 'fullName', 'avatarUrl']
+                        },
+                        {
+                            model: Chapter,
+                            include: [{
+                                model: Lecture,
+                                attributes: ['lectureId', 'title', 'duration']
+                            }]
+                        }
+                    ]
+                }
+            ],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [['enrolledAt', 'DESC']]
+        });
+
+        const coursesWithProgress = await Promise.all(
+            enrollments.rows.map(async (enrollment) => {
+                const course = enrollment.Course;
+
+                const totalLectures = course.Chapters.reduce(
+                    (sum, chapter) => sum + chapter.Lectures.length,
+                    0
+                );
+
+                const completedLectures = await UserProgress.count({
+                    where: { userId },
+                    include: [{
+                        model: Lecture,
+                        include: [{
+                            model: Chapter,
+                            where: { courseId: course.courseId }
+                        }]
+                    }]
+                });
+
+                const progressPercentage = totalLectures > 0
+                    ? Math.round((completedLectures / totalLectures) * 100)
+                    : 0;
+
+                return {
+                    enrollmentId: enrollment.enrollmentId,
+                    enrolledAt: enrollment.enrolledAt,
+                    pricePaid: enrollment.pricePaid,
+                    course: {
+                        ...course.toJSON(),
+                        progress: {
+                            completed: completedLectures,
+                            total: totalLectures,
+                            percentage: progressPercentage
+                        }
+                    }
+                };
+            })
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Lấy danh sách khóa học đã đăng ký thành công",
+            data: {
+                enrollments: coursesWithProgress,
+                pagination: {
+                    total: enrollments.count,
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    totalPages: Math.ceil(enrollments.count / limit)
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in getEnrolledCourses:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi lấy danh sách khóa học",
+            error: error.message
+        });
+    }
+};
+
