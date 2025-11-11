@@ -414,3 +414,77 @@ export const enrollCourse = async (req, res) => {
     }
 };
 
+// ============================================
+// POST /:id/rate - Đánh giá khóa học
+// ============================================
+export const rateCourse = async (req, res) => {
+    try {
+        const { id: courseId } = req.params;
+        const { rating, comment } = req.body;
+
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({
+                success: false,
+                message: "Rating phải từ 1 đến 5"
+            });
+        }
+
+        let userId;
+
+        if (req.user && req.user.userId) {
+            userId = req.user.userId;
+        } else {
+            const defaultStudent = await User.findOne({
+                where: { email: 'thanhtung@gmail.com' }
+            });
+            userId = defaultStudent.userId;
+            console.log('Warning: Sử dụng student mặc định (chưa có auth)');
+        }
+
+        const enrollment = await Enrollment.findOne({
+            where: { userId, courseId }
+        });
+
+        if (!enrollment) {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn phải đăng ký khóa học trước khi đánh giá"
+            });
+        }
+
+        let existingRating = await CourseRating.findOne({
+            where: { userId, courseId }
+        });
+
+        if (existingRating) {
+            await existingRating.update({ rating, comment });
+
+            return res.status(200).json({
+                success: true,
+                message: "Cập nhật đánh giá thành công",
+                data: existingRating
+            });
+        }
+
+        const newRating = await CourseRating.create({
+            userId,
+            courseId,
+            rating,
+            comment
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Đánh giá khóa học thành công",
+            data: newRating
+        });
+
+    } catch (error) {
+        console.error("Error in rateCourse:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi đánh giá khóa học",
+            error: error.message
+        });
+    }
+};
