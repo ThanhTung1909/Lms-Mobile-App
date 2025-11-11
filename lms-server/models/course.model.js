@@ -1,5 +1,4 @@
 import { DataTypes } from "sequelize";
-import sequelize from "../configs/database.js";
 
 export default (sequelize) => {
   const Course = sequelize.define(
@@ -25,14 +24,15 @@ export default (sequelize) => {
         type: DataTypes.DECIMAL(5, 2),
         defaultValue: 0.0,
       },
-      thumbnaiUrl: {
+      // SỬA: thumbnaiUrl -> thumbnailUrl (thêm chữ "l")
+      thumbnailUrl: {
         type: DataTypes.STRING,
       },
       status: {
         type: DataTypes.ENUM("draft", "published", "archived"),
         defaultValue: "draft",
       },
-      // creatorId sẽ được Sequelize tự động thêm vào khi định nghĩa quan hệ
+      // creatorId sẽ được Sequelize tự động thêm
     },
     {
       tableName: "courses",
