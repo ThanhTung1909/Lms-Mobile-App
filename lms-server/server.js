@@ -4,6 +4,7 @@ import "dotenv/config";
 
 import db from "./models/index.js";
 import mainRouter from "./routes/index.js";
+import connectCloudinary from "./configs/cloudinary.js";
 
 // Initialize Express
 const app = express();
@@ -11,6 +12,9 @@ const app = express();
 // Middlewares
 app.use(express.json());
 app.use(cors());
+
+// connect cloudinary
+await connectCloudinary()
 
 // Routes
 app.get("/", (req, res) => {
