@@ -429,6 +429,7 @@ export const rateCourse = async (req, res) => {
             });
         }
 
+
         let userId;
 
         if (req.user && req.user.userId) {
