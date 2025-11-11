@@ -91,3 +91,83 @@ export const getAllCourses = async (req, res) => {
     }
 };
 
+// ============================================
+// GET /:id - Lấy chi tiết khóa học
+// ============================================
+export const getCourseById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const course = await Course.findByPk(id, {
+            include: [
+                {
+                    model: User,
+                    as: 'creator',
+                    attributes: ['userId', 'fullName', 'email', 'avatarUrl']
+                },
+                {
+                    model: User,
+                    as: 'instructors',
+                    attributes: ['userId', 'fullName', 'avatarUrl'],
+                    through: { attributes: [] }
+                },
+                {
+                    model: Category,
+                    attributes: ['categoryId', 'name', 'slug'],
+                    through: { attributes: [] }
+                },
+                {
+                    model: Chapter,
+                    attributes: ['chapterId', 'title', 'orderIndex'],
+                    include: [{
+                        model: Lecture,
+                        attributes: ['lectureId', 'title', 'videoUrl', 'content', 'duration', 'lectureType', 'orderIndex']
+                    }],
+                    order: [['orderIndex', 'ASC']]
+                },
+                {
+                    model: CourseRating,
+                    attributes: ['ratingId', 'rating', 'comment', 'createdAt'],
+                    include: [{
+                        model: User,
+                        attributes: ['userId', 'fullName', 'avatarUrl']
+                    }]
+                }
+            ]
+        });
+
+        if (!course) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy khóa học"
+            });
+        }
+
+        const avgRating = course.CourseRatings.length > 0
+            ? course.CourseRatings.reduce((sum, r) => sum + r.rating, 0) / course.CourseRatings.length
+            : 0;
+
+        const studentCount = await Enrollment.count({
+            where: { courseId: id }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Lấy chi tiết khóa học thành công",
+            data: {
+                ...course.toJSON(),
+                avgRating: avgRating.toFixed(1),
+                totalRatings: course.CourseRatings.length,
+                studentCount
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in getCourseById:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi lấy chi tiết khóa học",
+            error: error.message
+        });
+    }
+};
