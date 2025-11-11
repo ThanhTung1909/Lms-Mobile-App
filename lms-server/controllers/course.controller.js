@@ -171,3 +171,78 @@ export const getCourseById = async (req, res) => {
         });
     }
 };
+
+// ============================================
+// POST / - Tạo khóa học mới (educator)
+// ============================================
+export const createCourse = async (req, res) => {
+    try {
+        const {
+            title,
+            description,
+            price,
+            discount = 0,
+            thumbnailUrl,
+            categoryIds = []
+        } = req.body;
+
+        if (!title || !description) {
+            return res.status(400).json({
+                success: false,
+                message: "Thiếu thông tin bắt buộc (title, description)"
+            });
+        }
+        // Nếu chưa có auth, dùng user mặc định từ database
+        let creatorId;
+
+        if (req.user && req.user.userId) {
+            creatorId = req.user.userId;
+        } else {
+            // Tạm thời dùng educator mặc định khi test
+            const defaultEducator = await User.findOne({
+                where: { email: 'dinotimo@gmail.com' }
+            });
+
+            if (!defaultEducator) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Vui lòng đăng nhập để tạo khóa học"
+                });
+            }
+
+            creatorId = defaultEducator.userId;
+            console.log('Warning: Sử dụng educator mặc định (chưa có auth)');
+        }
+
+        const newCourse = await Course.create({
+            title,
+            description,
+            price: price || 0,
+            discount,
+            thumbnailUrl,
+            status: 'draft',
+            creatorId
+        });
+
+        if (categoryIds.length > 0) {
+            const categories = await Category.findAll({
+                where: { categoryId: categoryIds }
+            });
+            await newCourse.addCategories(categories);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: "Tạo khóa học thành công",
+            data: newCourse
+        });
+
+    } catch (error) {
+        console.error("Error in createCourse:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi tạo khóa học",
+            error: error.message
+        });
+    }
+};
