@@ -255,3 +255,98 @@ export const getEnrolledCourses = async (req, res) => {
     }
 };
 
+// ============================================
+// GET /progress - Lấy tiến độ học tập
+// ============================================
+export const getUserProgress = async (req, res) => {
+    try {
+        let userId;
+
+        if (req.user && req.user.userId) {
+            userId = req.user.userId;
+        } else {
+            const defaultUser = await User.findOne({
+                where: { email: 'thanhtung@gmail.com' }
+            });
+            userId = defaultUser.userId;
+            console.log('Warning: Sử dụng user mặc định (chưa có auth)');
+        }
+
+        const { courseId } = req.query;
+
+        const whereConditions = { userId };
+        const includeConditions = [
+            {
+                model: Lecture,
+                attributes: ['lectureId', 'title', 'duration', 'lectureType'],
+                include: [
+                    {
+                        model: Chapter,
+                        attributes: ['chapterId', 'title', 'courseId'],
+                        include: [{
+                            model: Course,
+                            attributes: ['courseId', 'title', 'thumbnailUrl']
+                        }]
+                    }
+                ]
+            }
+        ];
+
+        if (courseId) {
+            includeConditions[0].include[0].where = { courseId };
+        }
+
+        const progressRecords = await UserProgress.findAll({
+            where: whereConditions,
+            include: includeConditions,
+            order: [['completedAt', 'DESC']]
+        });
+
+        const progressByCourse = {};
+
+        progressRecords.forEach(record => {
+            const course = record.Lecture.Chapter.Course;
+            const courseId = course.courseId;
+
+            if (!progressByCourse[courseId]) {
+                progressByCourse[courseId] = {
+                    courseId: course.courseId,
+                    courseTitle: course.title,
+                    courseThumbnail: course.thumbnailUrl,
+                    completedLectures: [],
+                    totalCompleted: 0,
+                    totalDuration: 0
+                };
+            }
+
+            progressByCourse[courseId].completedLectures.push({
+                lectureId: record.Lecture.lectureId,
+                lectureTitle: record.Lecture.title,
+                duration: record.Lecture.duration,
+                completedAt: record.completedAt,
+                chapterTitle: record.Lecture.Chapter.title
+            });
+
+            progressByCourse[courseId].totalCompleted++;
+            progressByCourse[courseId].totalDuration += record.Lecture.duration || 0;
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Lấy tiến độ học tập thành công",
+            data: {
+                progressByCourse: Object.values(progressByCourse),
+                totalCompleted: progressRecords.length
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in getUserProgress:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi lấy tiến độ học tập",
+            error: error.message
+        });
+    }
+};
+
