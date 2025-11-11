@@ -350,3 +350,81 @@ export const getUserProgress = async (req, res) => {
     }
 };
 
+// ============================================
+// POST /progress/:lectureId - Đánh dấu bài học đã hoàn thành
+// ============================================
+export const markLectureComplete = async (req, res) => {
+    try {
+        let userId;
+
+        if (req.user && req.user.userId) {
+            userId = req.user.userId;
+        } else {
+            const defaultUser = await User.findOne({
+                where: { email: 'thanhtung@gmail.com' }
+            });
+            userId = defaultUser.userId;
+            console.log('Warning: Sử dụng user mặc định (chưa có auth)');
+        }
+
+        const { lectureId } = req.params;
+
+        const lecture = await Lecture.findByPk(lectureId, {
+            include: [{
+                model: Chapter,
+                include: [{ model: Course }]
+            }]
+        });
+
+        if (!lecture) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy bài học"
+            });
+        }
+
+        const courseId = lecture.Chapter.Course.courseId;
+        const enrollment = await Enrollment.findOne({
+            where: { userId, courseId }
+        });
+
+        if (!enrollment) {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn chưa đăng ký khóa học này"
+            });
+        }
+
+        let progress = await UserProgress.findOne({
+            where: { userId, lectureId }
+        });
+
+        if (progress) {
+            return res.status(200).json({
+                success: true,
+                message: "Bài học đã được đánh dấu hoàn thành trước đó",
+                data: progress
+            });
+        }
+
+        progress = await UserProgress.create({
+            userId,
+            lectureId,
+            completedAt: new Date()
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Đánh dấu bài học hoàn thành thành công",
+            data: progress
+        });
+
+    } catch (error) {
+        console.error("Error in markLectureComplete:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi đánh dấu bài học hoàn thành",
+            error: error.message
+        });
+    }
+};
