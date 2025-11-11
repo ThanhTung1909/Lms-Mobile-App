@@ -350,3 +350,67 @@ export const deleteCourse = async (req, res) => {
         });
     }
 };
+
+// ============================================
+// POST /:id/enroll - Đăng ký khóa học
+// ============================================
+export const enrollCourse = async (req, res) => {
+    try {
+        const { id: courseId } = req.params;
+
+        let userId;
+
+        if (req.user && req.user.userId) {
+            userId = req.user.userId;
+        } else {
+            const defaultStudent = await User.findOne({
+                where: { email: 'thanhtung@gmail.com' }
+            });
+            userId = defaultStudent.userId;
+            console.log(' Warning: Sử dụng student mặc định (chưa có auth)');
+        }
+
+        const course = await Course.findByPk(courseId);
+        if (!course) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy khóa học"
+            });
+        }
+
+        const existingEnrollment = await Enrollment.findOne({
+            where: { userId, courseId }
+        });
+
+        if (existingEnrollment) {
+            return res.status(400).json({
+                success: false,
+                message: "Bạn đã đăng ký khóa học này rồi"
+            });
+        }
+
+        const finalPrice = course.price - (course.price * course.discount / 100);
+
+        const enrollment = await Enrollment.create({
+            userId,
+            courseId,
+            pricePaid: finalPrice,
+            enrolledAt: new Date()
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Đăng ký khóa học thành công",
+            data: enrollment
+        });
+
+    } catch (error) {
+        console.error("Error in enrollCourse:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi đăng ký khóa học",
+            error: error.message
+        });
+    }
+};
+
