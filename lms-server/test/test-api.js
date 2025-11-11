@@ -146,6 +146,60 @@ async function testCreateCourse() {
 }
 
 // ============================================
+// TEST USER ROUTES
+// ============================================
+
+async function testGetProfile() {
+    console.log('\n' + '='.repeat(60));
+    logInfo('TEST 5: GET /api/v1/users/profile - Xem profile (MOCK - không có auth)');
+    console.log('='.repeat(60));
+
+    try {
+        const response = await fetch(`${BASE_URL}/users/profile`, {
+            headers: {
+                // 'Authorization': 'Bearer <token>'  // Cần token thật
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            logSuccess('Lấy profile thành công (nếu có auth)');
+            console.log(`Name: ${data.data?.fullName}`);
+            console.log(`Email: ${data.data?.email}`);
+        } else if (response.status === 401) {
+            logWarning('Cần đăng nhập để xem profile (Expected)');
+        } else {
+            logError(`Lỗi: ${data.message}`);
+        }
+    } catch (error) {
+        logError(`Lỗi kết nối: ${error.message}`);
+    }
+}
+
+async function testGetEnrolledCourses() {
+    console.log('\n' + '='.repeat(60));
+    logInfo('TEST 6: GET /api/v1/users/enrolled-courses - Khóa học đã đăng ký');
+    console.log('='.repeat(60));
+
+    try {
+        const response = await fetch(`${BASE_URL}/users/enrolled-courses`);
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            logSuccess('Lấy danh sách enrolled courses thành công');
+            console.log(`Số khóa học: ${data.data?.enrollments?.length || 0}`);
+        } else if (response.status === 401) {
+            logWarning('Cần đăng nhập (Expected)');
+        } else {
+            logError(`Lỗi: ${data.message}`);
+        }
+    } catch (error) {
+        logError(`Lỗi kết nối: ${error.message}`);
+    }
+}
+
+// ============================================
 // MAIN TEST RUNNER
 // ============================================
 
@@ -171,6 +225,11 @@ async function runAllTests() {
     await testCreateCourse();
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    // Test User Routes
+    await testGetProfile();
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    await testGetEnrolledCourses();
 
     // Kết thúc
     console.log('\n' + '='.repeat(60));
