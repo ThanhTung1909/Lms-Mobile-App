@@ -6,6 +6,8 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Ionicons } from '@expo/vector-icons';
 
+import ProjectsTab from '@/components/specific/courses/lesson/ProjectsTab';
+
 import { CourseSection, Lesson } from '@/types/course';
 
 // ==========================================
@@ -202,6 +204,14 @@ export default function LessonViewScreen() {
           ) : (
             <View style={{ padding: 20, alignItems: 'center' }}>
               <ThemedText style={{ color: iconColor }}>Content for {activeTab} is coming soon.</ThemedText>
+            </View>
+          )}
+          {activeTab === 'PROJECTS' && (
+            <ProjectsTab />
+          )}
+          {activeTab === 'Q&A' && (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <ThemedText style={{ color: iconColor }}>Q&A is coming soon.</ThemedText>
             </View>
           )}
         </View>
