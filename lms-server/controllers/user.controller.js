@@ -7,42 +7,18 @@ const UserProgress = db.UserProgress;
 const Lecture = db.Lecture;
 const Chapter = db.Chapter;
 
-// ============================================
-// GET /profile - Xem profile của user hiện tại
-// ============================================
+// GET /profile
 export const getProfile = async (req, res) => {
     try {
-        let userId;
-
-        if (req.user && req.user.userId) {
-            userId = req.user.userId;
-        } else {
-            const defaultUser = await User.findOne({
-                where: { email: 'thanhtung@gmail.com' }
-            });
-
-            if (!defaultUser) {
-                return res.status(401).json({
-                    success: false,
-                    message: "Vui lòng đăng nhập"
-                });
-            }
-
-            userId = defaultUser.userId;
-            console.log('Warning: Sử dụng user mặc định (chưa có auth)');
-        }
+        const userId = req.user.userId;
 
         const user = await User.findByPk(userId, {
-            attributes: {
-                exclude: ['passwordHash']
-            },
-            include: [
-                {
-                    model: db.Role,
-                    attributes: ['roleId', 'name'],
-                    through: { attributes: [] }
-                }
-            ]
+            attributes: { exclude: ['passwordHash'] },
+            include: [{
+                model: db.Role,
+                attributes: ['roleId', 'name'],
+                through: { attributes: [] }
+            }]
         });
 
         if (!user) {
@@ -82,27 +58,11 @@ export const getProfile = async (req, res) => {
     }
 };
 
-// ============================================
-// PUT /profile - Cập nhật profile
-// ============================================
+// PUT /profile
 export const updateProfile = async (req, res) => {
     try {
-        let userId;
-
-        if (req.user && req.user.userId) {
-            userId = req.user.userId;
-        } else {
-            const defaultUser = await User.findOne({
-                where: { email: 'thanhtung@gmail.com' }
-            });
-            userId = defaultUser.userId;
-            console.log('Warning: Sử dụng user mặc định (chưa có auth)');
-        }
-
-        const {
-            fullName,
-            avatarUrl,
-        } = req.body;
+        const userId = req.user.userId;
+        const { fullName, avatarUrl } = req.body;
 
         const user = await User.findByPk(userId);
 
@@ -137,90 +97,82 @@ export const updateProfile = async (req, res) => {
     }
 };
 
-// ============================================
-// GET /enrolled-courses - Lấy danh sách khóa học đã đăng ký
-// ============================================
+// GET /enrolled-courses
 export const getEnrolledCourses = async (req, res) => {
     try {
-
-        let userId;
-
-        if (req.user && req.user.userId) {
-            userId = req.user.userId;
-        } else {
-            const defaultUser = await User.findOne({
-                where: { email: 'thanhtung@gmail.com' }
-            });
-            userId = defaultUser.userId;
-            console.log('Warning: Sử dụng user mặc định (chưa có auth)');
-        }
-
+        const userId = req.user.userId;
         const { status, page = 1, limit = 10 } = req.query;
 
-        const offset = (page - 1) * limit;
-
-        const courseWhereConditions = {};
-        if (status) {
-            courseWhereConditions.status = status;
-        }
-
-        const enrollments = await Enrollment.findAndCountAll({
-            where: { userId },
-            include: [
-                {
-                    model: Course,
-                    where: courseWhereConditions,
-                    include: [
-                        {
-                            model: User,
-                            as: 'creator',
-                            attributes: ['userId', 'fullName', 'avatarUrl']
-                        },
-                        {
-                            model: Chapter,
-                            include: [{
-                                model: Lecture,
-                                attributes: ['lectureId', 'title', 'duration']
-                            }]
-                        }
-                    ]
-                }
-            ],
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['enrolledAt', 'DESC']]
+        const user = await User.findByPk(userId, {
+            include: [{
+                model: Course,
+                as: 'enrolledCourses',
+                through: {
+                    attributes: ['enrollmentId', 'enrolledAt', 'pricePaid']
+                },
+                where: status ? { status } : {},
+                include: [
+                    {
+                        model: User,
+                        as: 'creator',
+                        attributes: ['userId', 'fullName', 'avatarUrl']
+                    },
+                    {
+                        model: Chapter,
+                        include: [{
+                            model: Lecture,
+                            attributes: ['lectureId', 'title', 'duration']
+                        }]
+                    }
+                ]
+            }]
         });
 
-        const coursesWithProgress = await Promise.all(
-            enrollments.rows.map(async (enrollment) => {
-                const course = enrollment.Course;
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy user"
+            });
+        }
 
+        const enrolledCourses = user.enrolledCourses || [];
+
+        const coursesWithProgress = await Promise.all(
+            enrolledCourses.map(async (course) => {
                 const totalLectures = course.Chapters.reduce(
                     (sum, chapter) => sum + chapter.Lectures.length,
                     0
                 );
 
-                const completedLectures = await UserProgress.count({
-                    where: { userId },
-                    include: [{
-                        model: Lecture,
-                        include: [{
-                            model: Chapter,
-                            where: { courseId: course.courseId }
-                        }]
-                    }]
+                // Lấy tất cả lecture IDs của course này
+                const lectureIds = [];
+                course.Chapters.forEach(chapter => {
+                    chapter.Lectures.forEach(lecture => {
+                        lectureIds.push(lecture.lectureId);
+                    });
                 });
+
+                // Đếm số lectures đã hoàn thành
+                const completedLectures = lectureIds.length > 0
+                    ? await UserProgress.count({
+                        where: {
+                            userId,
+                            lectureId: lectureIds
+                        }
+                    })
+                    : 0;
 
                 const progressPercentage = totalLectures > 0
                     ? Math.round((completedLectures / totalLectures) * 100)
                     : 0;
 
                 return {
-                    enrollmentId: enrollment.enrollmentId,
-                    enrolledAt: enrollment.enrolledAt,
-                    pricePaid: enrollment.pricePaid,
+                    enrollmentId: course.Enrollment?.enrollmentId,
+                    enrolledAt: course.Enrollment?.enrolledAt,
+                    pricePaid: course.Enrollment?.pricePaid,
                     course: {
                         ...course.toJSON(),
+                        Enrollment: undefined,
                         progress: {
                             completed: completedLectures,
                             total: totalLectures,
@@ -237,10 +189,10 @@ export const getEnrolledCourses = async (req, res) => {
             data: {
                 enrollments: coursesWithProgress,
                 pagination: {
-                    total: enrollments.count,
+                    total: enrolledCourses.length,
                     page: parseInt(page),
                     limit: parseInt(limit),
-                    totalPages: Math.ceil(enrollments.count / limit)
+                    totalPages: Math.ceil(enrolledCourses.length / limit)
                 }
             }
         });
@@ -255,42 +207,28 @@ export const getEnrolledCourses = async (req, res) => {
     }
 };
 
-// ============================================
-// GET /progress - Lấy tiến độ học tập
-// ============================================
+// GET /progress
 export const getUserProgress = async (req, res) => {
     try {
-        let userId;
-
-        if (req.user && req.user.userId) {
-            userId = req.user.userId;
-        } else {
-            const defaultUser = await User.findOne({
-                where: { email: 'thanhtung@gmail.com' }
-            });
-            userId = defaultUser.userId;
-            console.log('Warning: Sử dụng user mặc định (chưa có auth)');
-        }
-
+        const userId = req.user.userId;
         const { courseId } = req.query;
 
         const whereConditions = { userId };
-        const includeConditions = [
-            {
-                model: Lecture,
-                attributes: ['lectureId', 'title', 'duration', 'lectureType'],
-                include: [
-                    {
-                        model: Chapter,
-                        attributes: ['chapterId', 'title', 'courseId'],
-                        include: [{
-                            model: Course,
-                            attributes: ['courseId', 'title', 'thumbnailUrl']
-                        }]
-                    }
-                ]
-            }
-        ];
+        const includeConditions = [{
+            model: Lecture,
+            attributes: ['lectureId', 'title', 'duration', 'lectureType'],
+            required: false, // Cho phép null
+            include: [{
+                model: Chapter,
+                attributes: ['chapterId', 'title', 'courseId'],
+                required: false, //  Cho phép null
+                include: [{
+                    model: Course,
+                    attributes: ['courseId', 'title', 'thumbnailUrl'],
+                    required: false // Cho phép null
+                }]
+            }]
+        }];
 
         if (courseId) {
             includeConditions[0].include[0].where = { courseId };
@@ -305,11 +243,27 @@ export const getUserProgress = async (req, res) => {
         const progressByCourse = {};
 
         progressRecords.forEach(record => {
-            const course = record.Lecture.Chapter.Course;
-            const courseId = course.courseId;
+            // KIỂM TRA TỪNG LEVEL
+            if (!record.Lecture) {
+                console.log(`Skipping progress ${record.progressId}: Lecture is null`);
+                return;
+            }
 
-            if (!progressByCourse[courseId]) {
-                progressByCourse[courseId] = {
+            if (!record.Lecture.Chapter) {
+                console.log(`Skipping progress ${record.progressId}: Chapter is null`);
+                return;
+            }
+
+            if (!record.Lecture.Chapter.Course) {
+                console.log(`Skipping progress ${record.progressId}: Course is null`);
+                return;
+            }
+
+            const course = record.Lecture.Chapter.Course;
+            const cId = course.courseId;
+
+            if (!progressByCourse[cId]) {
+                progressByCourse[cId] = {
                     courseId: course.courseId,
                     courseTitle: course.title,
                     courseThumbnail: course.thumbnailUrl,
@@ -319,7 +273,7 @@ export const getUserProgress = async (req, res) => {
                 };
             }
 
-            progressByCourse[courseId].completedLectures.push({
+            progressByCourse[cId].completedLectures.push({
                 lectureId: record.Lecture.lectureId,
                 lectureTitle: record.Lecture.title,
                 duration: record.Lecture.duration,
@@ -327,8 +281,8 @@ export const getUserProgress = async (req, res) => {
                 chapterTitle: record.Lecture.Chapter.title
             });
 
-            progressByCourse[courseId].totalCompleted++;
-            progressByCourse[courseId].totalDuration += record.Lecture.duration || 0;
+            progressByCourse[cId].totalCompleted++;
+            progressByCourse[cId].totalDuration += record.Lecture.duration || 0;
         });
 
         res.status(200).json({
@@ -336,7 +290,7 @@ export const getUserProgress = async (req, res) => {
             message: "Lấy tiến độ học tập thành công",
             data: {
                 progressByCourse: Object.values(progressByCourse),
-                totalCompleted: progressRecords.length
+                totalCompleted: progressRecords.filter(r => r.Lecture && r.Lecture.Chapter && r.Lecture.Chapter.Course).length
             }
         });
 
@@ -350,23 +304,10 @@ export const getUserProgress = async (req, res) => {
     }
 };
 
-// ============================================
-// POST /progress/:lectureId - Đánh dấu bài học đã hoàn thành
-// ============================================
+// POST /progress/:lectureId
 export const markLectureComplete = async (req, res) => {
     try {
-        let userId;
-
-        if (req.user && req.user.userId) {
-            userId = req.user.userId;
-        } else {
-            const defaultUser = await User.findOne({
-                where: { email: 'thanhtung@gmail.com' }
-            });
-            userId = defaultUser.userId;
-            console.log('Warning: Sử dụng user mặc định (chưa có auth)');
-        }
-
+        const userId = req.user.userId;
         const { lectureId } = req.params;
 
         const lecture = await Lecture.findByPk(lectureId, {

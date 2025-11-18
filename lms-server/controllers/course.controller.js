@@ -8,9 +8,7 @@ const Lecture = db.Lecture;
 const Enrollment = db.Enrollment;
 const CourseRating = db.CourseRating;
 
-// ============================================
 // GET / - Lấy danh sách khóa học
-// ============================================
 export const getAllCourses = async (req, res) => {
     try {
         const {
@@ -91,9 +89,7 @@ export const getAllCourses = async (req, res) => {
     }
 };
 
-// ============================================
 // GET /:id - Lấy chi tiết khóa học
-// ============================================
 export const getCourseById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -172,9 +168,7 @@ export const getCourseById = async (req, res) => {
     }
 };
 
-// ============================================
 // POST / - Tạo khóa học mới (educator)
-// ============================================
 export const createCourse = async (req, res) => {
     try {
         const {
@@ -192,27 +186,8 @@ export const createCourse = async (req, res) => {
                 message: "Thiếu thông tin bắt buộc (title, description)"
             });
         }
-        // Nếu chưa có auth, dùng user mặc định từ database
-        let creatorId;
 
-        if (req.user && req.user.userId) {
-            creatorId = req.user.userId;
-        } else {
-            // Tạm thời dùng educator mặc định khi test
-            const defaultEducator = await User.findOne({
-                where: { email: 'dinotimo@gmail.com' }
-            });
-
-            if (!defaultEducator) {
-                return res.status(401).json({
-                    success: false,
-                    message: "Vui lòng đăng nhập để tạo khóa học"
-                });
-            }
-
-            creatorId = defaultEducator.userId;
-            console.log('Warning: Sử dụng educator mặc định (chưa có auth)');
-        }
+        const creatorId = req.user.userId;
 
         const newCourse = await Course.create({
             title,
@@ -247,9 +222,7 @@ export const createCourse = async (req, res) => {
     }
 };
 
-// ============================================
 // PUT /:id - Cập nhật khóa học
-// ============================================
 export const updateCourse = async (req, res) => {
     try {
         const { id } = req.params;
@@ -272,12 +245,12 @@ export const updateCourse = async (req, res) => {
             });
         }
 
-        // if (course.creatorId !== req.user?.userId && req.user?.role !== 'admin') {
-        //   return res.status(403).json({
-        //     success: false,
-        //     message: "Bạn không có quyền cập nhật khóa học này"
-        //   });
-        // }
+        if (course.creatorId !== req.user.userId && !req.user.roles.includes('admin')) {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền cập nhật khóa học này"
+            });
+        }
 
         await course.update({
             title: title || course.title,
@@ -311,9 +284,7 @@ export const updateCourse = async (req, res) => {
     }
 };
 
-// ============================================
 // DELETE /:id - Xóa khóa học
-// ============================================
 export const deleteCourse = async (req, res) => {
     try {
         const { id } = req.params;
@@ -327,12 +298,12 @@ export const deleteCourse = async (req, res) => {
             });
         }
 
-        // if (course.creatorId !== req.user?.userId && req.user?.role !== 'admin') {
-        //   return res.status(403).json({
-        //     success: false,
-        //     message: "Bạn không có quyền xóa khóa học này"
-        //   });
-        // }
+        if (course.creatorId !== req.user.userId && !req.user.roles.includes('admin')) {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền xóa khóa học này"
+            });
+        }
 
         await course.destroy();
 
@@ -351,24 +322,11 @@ export const deleteCourse = async (req, res) => {
     }
 };
 
-// ============================================
 // POST /:id/enroll - Đăng ký khóa học
-// ============================================
 export const enrollCourse = async (req, res) => {
     try {
         const { id: courseId } = req.params;
-
-        let userId;
-
-        if (req.user && req.user.userId) {
-            userId = req.user.userId;
-        } else {
-            const defaultStudent = await User.findOne({
-                where: { email: 'thanhtung@gmail.com' }
-            });
-            userId = defaultStudent.userId;
-            console.log(' Warning: Sử dụng student mặc định (chưa có auth)');
-        }
+        const userId = req.user.userId;
 
         const course = await Course.findByPk(courseId);
         if (!course) {
@@ -414,12 +372,11 @@ export const enrollCourse = async (req, res) => {
     }
 };
 
-// ============================================
 // POST /:id/rate - Đánh giá khóa học
-// ============================================
 export const rateCourse = async (req, res) => {
     try {
         const { id: courseId } = req.params;
+        const userId = req.user.userId;
         const { rating, comment } = req.body;
 
         if (!rating || rating < 1 || rating > 5) {
@@ -427,19 +384,6 @@ export const rateCourse = async (req, res) => {
                 success: false,
                 message: "Rating phải từ 1 đến 5"
             });
-        }
-
-
-        let userId;
-
-        if (req.user && req.user.userId) {
-            userId = req.user.userId;
-        } else {
-            const defaultStudent = await User.findOne({
-                where: { email: 'thanhtung@gmail.com' }
-            });
-            userId = defaultStudent.userId;
-            console.log('Warning: Sử dụng student mặc định (chưa có auth)');
         }
 
         const enrollment = await Enrollment.findOne({
