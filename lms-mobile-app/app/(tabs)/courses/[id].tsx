@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import OverviewTab from '@/components/specific/courses/course-details/OverviewTab';
 import LessonsTab from '@/components/specific/courses/course-details/LessonsTab';
+import ReviewsTab from '@/components/specific/courses/course-details/ReviewsTab';
+
 import { Course, CourseBenefit } from '@/types/course';
 
 // ============================
@@ -62,7 +64,7 @@ export default function CourseDetailsScreen() {
       case 'Lessons':
         return <LessonsTab />;
       case 'Review':
-        return <View style={{ padding: 20 }}><ThemedText>Review Content Here</ThemedText></View>;
+        return <ReviewsTab />;
     }
   };
 

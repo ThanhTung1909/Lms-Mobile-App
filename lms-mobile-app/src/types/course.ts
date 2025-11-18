@@ -51,6 +51,17 @@ export type Lesson = {
 
 export type CourseSection = {
     id: string;
-    title: string; 
+    title: string;
     lessons: Lesson[];
+};
+
+export type Review = {
+    id: string;
+    user: {
+        name: string;
+        avatar: string;
+    };
+    rating: number;
+    date: string; // Ví dụ: "A day ago"
+    comment: string;
 };
