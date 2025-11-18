@@ -7,6 +7,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { Ionicons } from '@expo/vector-icons';
 
 import OverviewTab from '@/components/specific/courses/course-details/OverviewTab';
+import LessonsTab from '@/components/specific/courses/course-details/LessonsTab';
 import { Course, CourseBenefit } from '@/types/course';
 
 // ============================
@@ -59,7 +60,7 @@ export default function CourseDetailsScreen() {
       case 'Overview':
         return <OverviewTab course={courseDetail} similarCourses={similarCoursesData} />;
       case 'Lessons':
-        return <View style={{ padding: 20 }}><ThemedText>Lessons Content Here</ThemedText></View>;
+        return <LessonsTab />;
       case 'Review':
         return <View style={{ padding: 20 }}><ThemedText>Review Content Here</ThemedText></View>;
     }

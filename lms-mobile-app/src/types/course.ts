@@ -24,13 +24,13 @@ export type Course = {
     description?: string;
     benefits?: CourseBenefit[];
 };
+
 export type Category = {
     id: string;
     name: string;
     iconName: React.ComponentProps<typeof Ionicons>['name'];
     color: string;
 };
-
 
 export type Teacher = {
     id: string;
@@ -39,3 +39,18 @@ export type Teacher = {
     avatar: string;
 };
 
+export type LessonStatus = 'completed' | 'active' | 'locked';
+
+export type Lesson = {
+    id: string;
+    title: string;
+    duration: string;
+    lessonNumber: string;
+    status: LessonStatus;
+};
+
+export type CourseSection = {
+    id: string;
+    title: string; 
+    lessons: Lesson[];
+};
