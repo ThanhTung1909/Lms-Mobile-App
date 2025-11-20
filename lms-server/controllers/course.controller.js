@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import db from "../models/index.js";
+import { verifyCommentAI } from "../utils/aiModeration.js";
 
 const Course = db.Course;
 const User = db.User;
@@ -72,12 +73,12 @@ export const getCourseById = async (req, res) => {
           as: "creator",
           attributes: ["userId", "fullName", "email", "avatarUrl"],
         },
-        {
-          model: db.User,
-          as: "instructors",
-          attributes: ["userId", "fullName", "avatarUrl"],
-          through: { attributes: [] },
-        },
+        // {
+        //   model: db.User,
+        //   as: "instructors",
+        //   attributes: ["userId", "fullName", "avatarUrl"],
+        //   through: { attributes: [] },
+        // },
         {
           model: db.Category,
           as: "categories",
@@ -360,6 +361,20 @@ export const rateCourse = async (req, res) => {
         success: false,
         message: "Rating phải từ 1 đến 5",
       });
+    }
+
+    // Kiểm tra nội dung bình luận bằng AI
+    if (comment && comment.trim() !== "") {
+      const moderation = await verifyCommentAI(comment);
+
+      if (moderation.violate) {
+        return res.status(400).json({
+          success: false,
+          message: "Nội dung bình luận vi phạm tiêu chuẩn cộng đồng",
+          ai_reason: moderation.reason,
+          raw_ai: moderation, // debug
+        });
+      }
     }
 
     // Kiểm tra user đã enroll chưa
