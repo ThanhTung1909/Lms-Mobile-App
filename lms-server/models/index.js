@@ -12,6 +12,7 @@ import defineCourseRating from "./courseRating.model.js";
 import defineUserProgress from "./userProgress.model.js";
 import defineTestimonial from "./testimonial.model.js";
 import definePayment from "./payment.model.js";
+import defineCourseCategory from "./courseCategory.model.js";
 
 const db = {};
 
@@ -27,6 +28,7 @@ db.CourseRating = defineCourseRating(sequelizeConfig);
 db.UserProgress = defineUserProgress(sequelizeConfig);
 db.Testimonial = defineTestimonial(sequelizeConfig);
 db.Payment = definePayment(sequelizeConfig);
+db.CourseCategory = defineCourseCategory(sequelizeConfig);
 
 // User - Role (Many-to-Many)
 db.User.belongsToMany(db.Role, {
@@ -61,25 +63,60 @@ db.Course.belongsToMany(db.User, {
 db.User.belongsToMany(db.Course, {
   through: db.Enrollment,
   as: "enrolledCourses",
+  foreignKey: "userId",
+  otherKey: "courseId",
 });
-db.Course.belongsToMany(db.User, { through: db.Enrollment, as: "students" });
+
+db.Course.belongsToMany(db.User, {
+  through: db.Enrollment,
+  as: "students",
+  foreignKey: "courseId",
+  otherKey: "userId",
+});
 
 // User - Course (Rating)
-db.User.hasMany(db.CourseRating);
-db.CourseRating.belongsTo(db.User);
-db.Course.hasMany(db.CourseRating);
-db.CourseRating.belongsTo(db.Course);
+db.Course.hasMany(db.CourseRating, {
+  foreignKey: "courseId",
+  as: "CourseRatings",
+});
+db.CourseRating.belongsTo(db.Course, { foreignKey: "courseId", as: "course" });
+
+db.User.hasMany(db.CourseRating, { foreignKey: "userId", as: "CourseRatings" });
+db.CourseRating.belongsTo(db.User, { foreignKey: "userId", as: "user" });
 
 // Course - Category (Many-to-Many)
-db.Category.belongsToMany(db.Course, { through: "CourseCategory" });
-db.Course.belongsToMany(db.Category, { through: "CourseCategory" });
+db.Course.belongsToMany(db.Category, {
+  through: db.CourseCategory,
+  as: "categories",
+  foreignKey: "courseId",
+  otherKey: "categoryId",
+});
+
+db.Category.belongsToMany(db.Course, {
+  through: db.CourseCategory,
+  as: "courses",
+  foreignKey: "categoryId",
+  otherKey: "courseId",
+});
 
 // Course - Chapter - Lecture (Hierarchy)
-db.Course.hasMany(db.Chapter);
-db.Chapter.belongsTo(db.Course);
+db.Course.hasMany(db.Chapter, {
+  foreignKey: "courseId",
+  as: "chapters",
+});
+db.Chapter.belongsTo(db.Course, {
+  foreignKey: "courseId",
+  as: "course",
+});
 
-db.Chapter.hasMany(db.Lecture);
-db.Lecture.belongsTo(db.Chapter);
+db.Chapter.hasMany(db.Lecture, {
+  foreignKey: "chapterId",
+  as: "lectures",
+});
+db.Lecture.belongsTo(db.Chapter, {
+  foreignKey: "chapterId",
+  as: "chapter",
+});
 
 // User - Lecture (UserProgress)
 db.User.belongsToMany(db.Lecture, {

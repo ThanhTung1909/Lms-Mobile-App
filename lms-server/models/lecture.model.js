@@ -29,6 +29,10 @@ export default (sequelize) => {
       orderIndex: {
         type: DataTypes.INTEGER,
       },
+      chapterId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
     {
       tableName: "lectures",

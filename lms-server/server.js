@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(cors());
 
 // connect cloudinary
-await connectCloudinary()
+await connectCloudinary();
 
 // Routes
 app.get("/", (req, res) => {

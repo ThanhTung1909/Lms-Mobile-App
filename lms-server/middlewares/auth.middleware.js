@@ -1,4 +1,3 @@
-
 import jwt from "jsonwebtoken";
 import db from "../models/index.js";
 
@@ -33,15 +32,28 @@ export const authorizeRoles = (...roles) => {
       const user = await db.User.findByPk(req.user.id, {
         include: [{ model: db.Role, as: "roles" }],
       });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy user",
+        });
+      }
+
       const userRoles = user.roles.map((r) => r.name);
 
-      const hasRole = roles.some((r) => userRoles.include(r));
-      if (!hasRole) {
+      const allowed = roles.some((role) => userRoles.includes(role));
+
+      if (!allowed) {
         return res.status(403).json({
           success: false,
           message: "Bạn không có quyền truy cập",
         });
       }
+
+      // Gắn user Sequelize vào req để controller dùng
+      req.userData = user;
+
       next();
     } catch (error) {
       res.status(500).json({
@@ -52,4 +64,3 @@ export const authorizeRoles = (...roles) => {
     }
   };
 };
-

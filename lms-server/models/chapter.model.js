@@ -17,6 +17,10 @@ export default (sequelize) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+      courseId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
     {
       tableName: "chapters",

@@ -16,6 +16,17 @@ export default (sequelize) => {
       enrolledAt: {
         type: DataTypes.DATE,
       },
+      status: {
+        type: DataTypes.STRING,
+      },
+      userId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      courseId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
     {
       tableName: "enrollments",

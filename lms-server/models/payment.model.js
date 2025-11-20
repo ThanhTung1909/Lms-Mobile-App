@@ -3,16 +3,16 @@ import { DataTypes } from "sequelize";
 export default (sequelize) => {
   const Payment = sequelize.define("Payment", {
     paymentId: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
+      type: DataTypes.UUID,
+      default: DataTypes.UUIDV4,
       primaryKey: true,
     },
     userId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: false,
     },
     courseId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: false,
     },
     stripePaymentId: {

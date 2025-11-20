@@ -1,26 +1,39 @@
-import express from 'express';
+import express from "express";
 import {
-    getAllCourses,
-    getCourseById,
-    createCourse,
-    updateCourse,
-    deleteCourse,
-    enrollCourse,
-    rateCourse
-} from '../controllers/course.controller.js';
-import { authenticate, isEducator } from '../middlewares/auth.middleware.js';
+  getAllCourses,
+  getCourseById,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  rateCourse,
+} from "../controllers/course.controller.js";
+import { authorizeRoles, verifyToken } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
 // PUBLIC ROUTES
-router.get('/', getAllCourses);
-router.get('/:id', getCourseById);
+router.get("/", getAllCourses);
+router.get("/:id", getCourseById);
 
 // PROTECTED ROUTES
-router.post('/', authenticate, isEducator, createCourse);
-router.put('/:id', authenticate, updateCourse);
-router.delete('/:id', authenticate, deleteCourse);
-router.post('/:id/enroll', authenticate, enrollCourse);
-router.post('/:id/rate', authenticate, rateCourse);
+router.post(
+  "/",
+  verifyToken,
+  authorizeRoles("educator", "admin"),
+  createCourse
+);
+router.put(
+  "/:id",
+  verifyToken,
+  authorizeRoles("educator", "admin"),
+  updateCourse
+);
+router.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles("educator", "admin"),
+  deleteCourse
+);
+router.post("/:id/rate", verifyToken, rateCourse);
 
 export default router;

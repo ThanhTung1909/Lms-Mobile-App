@@ -24,9 +24,9 @@ export default (sequelize) => {
         type: DataTypes.DECIMAL(5, 2),
         defaultValue: 0.0,
       },
-      // SỬA: thumbnaiUrl -> thumbnailUrl (thêm chữ "l")
       thumbnailUrl: {
         type: DataTypes.STRING,
+        field: "thumbnail_url",
       },
       status: {
         type: DataTypes.ENUM("draft", "published", "archived"),
