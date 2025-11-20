@@ -4,6 +4,7 @@ import "dotenv/config";
 
 import db from "./models/index.js";
 import mainRouter from "./routes/index.js";
+import connectCloudinary from "./configs/cloudinary.js";
 
 // Initialize Express
 const app = express();
@@ -12,12 +13,15 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// connect cloudinary
+await connectCloudinary();
+
 // Routes
 app.get("/", (req, res) => {
   res.send("API Working");
 });
 
-app.use("api/v1", mainRouter);
+app.use("/api/v1", mainRouter);
 
 // Port
 const PORT = process.env.PORT || 5000;
@@ -34,7 +38,7 @@ const startServer = async () => {
     // { force: true } sẽ xóa bảng cũ và tạo lại, chỉ dùng trong môi trường dev.
     // Bỏ { force: true } trong môi trường production.
     await db.sequelize.sync({ force: false });
-    console.log("✅ All models were synchronized successfully.");
+    console.log("All models were synchronized successfully.");
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

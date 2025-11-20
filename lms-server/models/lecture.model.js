@@ -13,7 +13,8 @@ export default (sequelize) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      video_url: {
+      //  video_url -> videoUrl (camelCase)
+      videoUrl: {
         type: DataTypes.STRING,
       },
       content: {
@@ -28,10 +29,16 @@ export default (sequelize) => {
       orderIndex: {
         type: DataTypes.INTEGER,
       },
+      chapterId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
     {
       tableName: "lectures",
       timestamps: true,
+      //  Đảm bảo Sequelize không tự động chuyển đổi tên cột
+      underscored: false,
     }
   );
   return Lecture;
