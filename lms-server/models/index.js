@@ -75,11 +75,25 @@ db.Category.belongsToMany(db.Course, { through: "CourseCategory" });
 db.Course.belongsToMany(db.Category, { through: "CourseCategory" });
 
 // Course - Chapter - Lecture (Hierarchy)
-db.Course.hasMany(db.Chapter);
-db.Chapter.belongsTo(db.Course);
+db.Course.hasMany(db.Chapter, {
+  foreignKey: "courseId",
+  as: "chapters",
+  onDelete: "CASCADE",
+});
+db.Chapter.belongsTo(db.Course, {
+  foreignKey: "courseId",
+  as: "course",
+});
 
-db.Chapter.hasMany(db.Lecture);
-db.Lecture.belongsTo(db.Chapter);
+db.Chapter.hasMany(db.Lecture, {
+  foreignKey: "chapterId",
+  as: "lectures",
+  onDelete: "CASCADE",
+});
+db.Lecture.belongsTo(db.Chapter, {
+  foreignKey: "chapterId",
+  as: "chapter",
+});
 
 // User - Lecture (UserProgress)
 db.User.belongsToMany(db.Lecture, {
