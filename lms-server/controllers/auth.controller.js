@@ -1,3 +1,4 @@
+
 import db from "../models/index.js";
 import * as bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -127,3 +128,79 @@ export const getProfile = async (req, res) => {
     });
   }
 };
+
+// POST /logout
+export const logout = async (req, res) => {
+    try {
+        res.status(200).json({
+            success: true,
+            message: "Đăng xuất thành công",
+        });
+    } catch (error) {
+        console.error("Error in logout:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi đăng xuất",
+            error: error.message,
+        });
+    }
+};
+
+// POST /change-password
+export const changePassword = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Thiếu thông tin bắt buộc",
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "Mật khẩu mới phải có ít nhất 6 ký tự",
+            });
+        }
+
+        const user = await db.User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy user",
+            });
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+            currentPassword,
+            user.passwordHash
+        );
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: "Mật khẩu hiện tại không đúng",
+            });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+        await user.update({ passwordHash: newPasswordHash });
+
+        res.status(200).json({
+            success: true,
+            message: "Đổi mật khẩu thành công",
+        });
+    } catch (error) {
+        console.error("Error in changePassword:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi khi đổi mật khẩu",
+            error: error.message,
+        });
+    }
+};
+

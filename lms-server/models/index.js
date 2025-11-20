@@ -15,7 +15,7 @@ import definePayment from "./payment.model.js";
 
 const db = {};
 
-// Khởi tạo các model bằng cách gọi hàm và truyền sequelize instance vào
+// Khởi tạo các model
 db.User = defineUser(sequelizeConfig);
 db.Role = defineRole(sequelizeConfig);
 db.Course = defineCourse(sequelizeConfig);

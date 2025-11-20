@@ -38,7 +38,7 @@ const startServer = async () => {
     // { force: true } sẽ xóa bảng cũ và tạo lại, chỉ dùng trong môi trường dev.
     // Bỏ { force: true } trong môi trường production.
     await db.sequelize.sync({ force: false });
-    console.log("✅ All models were synchronized successfully.");
+    console.log("All models were synchronized successfully.");
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
