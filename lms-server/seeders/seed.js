@@ -1,4 +1,3 @@
-
 import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
@@ -28,6 +27,12 @@ const sequelizeServer = new Sequelize(
     dialect: process.env.DB_DIALECT,
     port: process.env.DB_PORT,
     logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
+    },
   }
 );
 
@@ -40,20 +45,20 @@ const sequelizeRoot = new Sequelize(
     dialect: process.env.DB_DIALECT,
     port: process.env.DB_PORT,
     logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
+    },
   }
 );
 
 const seedData = async () => {
   try {
-    // ====== Reset Database ======
-    await sequelizeRoot.query(
-      `DROP DATABASE IF EXISTS \`${process.env.DB_NAME}\`;`
-    );
-    await sequelizeRoot.query(`CREATE DATABASE \`${process.env.DB_NAME}\`;`);
-    console.log("✅ Database recreated");
-
+    console.log("⏳ Connecting to Database on Cloud...");
     await sequelizeServer.authenticate();
-    console.log("✅ Database connected");
+    console.log("✅ Database connected successfully!");
 
     // ====== Define Models ======
     const User = defineUser(sequelizeServer);
