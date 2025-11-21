@@ -13,8 +13,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// connect cloudinary
-await connectCloudinary();
+
 
 // Routes
 app.get("/", (req, res) => {
@@ -23,8 +22,9 @@ app.get("/", (req, res) => {
 
 app.use("/api/v1", mainRouter);
 
-// Port
-const PORT = process.env.PORT || 5000;
+// connect cloudinary
+connectCloudinary();
+
 
 const startServer = async () => {
   try {
@@ -49,3 +49,12 @@ const startServer = async () => {
 };
 
 startServer();
+
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server is running locally on port ${PORT}`);
+  });
+}
+
+export default app;
