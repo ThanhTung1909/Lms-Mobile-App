@@ -15,12 +15,14 @@ export default (sequelize) => {
       },
       slug: {
         type: DataTypes.STRING,
+        allowNull: false,
         unique: true,
       },
     },
     {
       tableName: "categories",
       timestamps: true,
+      underscored: true,
     }
   );
   return Category;

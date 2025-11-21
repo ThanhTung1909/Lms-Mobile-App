@@ -17,20 +17,28 @@ export default (sequelize) => {
         type: DataTypes.DATE,
       },
       status: {
-        type: DataTypes.STRING,
+        type: DataTypes.ENUM("active", "cancelled", "refunded"),
+        defaultValue: "active",
       },
       userId: {
         type: DataTypes.UUID,
         allowNull: false,
+        references: { model: "users", key: "user_id" },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
       courseId: {
         type: DataTypes.UUID,
         allowNull: false,
+        references: { model: "courses", key: "course_id" },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
     },
     {
       tableName: "enrollments",
       timestamps: true,
+      underscored: true,
     }
   );
   return Enrollment;

@@ -13,9 +13,9 @@ export default (sequelize) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      //  video_url -> videoUrl (camelCase)
       videoUrl: {
         type: DataTypes.STRING,
+        field: "video_url",
       },
       content: {
         type: DataTypes.TEXT,
@@ -32,13 +32,15 @@ export default (sequelize) => {
       chapterId: {
         type: DataTypes.UUID,
         allowNull: false,
+        references: { model: "chapters", key: "chapter_id" },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
     },
     {
       tableName: "lectures",
       timestamps: true,
-      //  Đảm bảo Sequelize không tự động chuyển đổi tên cột
-      underscored: false,
+      underscored: true,
     }
   );
   return Lecture;

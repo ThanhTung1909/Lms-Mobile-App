@@ -32,11 +32,18 @@ export default (sequelize) => {
         type: DataTypes.ENUM("draft", "published", "archived"),
         defaultValue: "draft",
       },
-      // creatorId sẽ được Sequelize tự động thêm
+      creatorId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: { model: "users", key: "user_id" },
+        onDelete: "SET NULL",
+        onUpdate: "CASCADE",
+      },
     },
     {
       tableName: "courses",
       timestamps: true,
+      underscored: true,
     }
   );
   return Course;

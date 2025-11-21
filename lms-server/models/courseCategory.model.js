@@ -10,7 +10,7 @@ export default (sequelize) => {
         primaryKey: true,
         references: {
           model: "courses",
-          key: "courseId",
+          key: "course_id",
         },
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
@@ -21,15 +21,16 @@ export default (sequelize) => {
         primaryKey: true,
         references: {
           model: "categories",
-          key: "categoryId",
+          key: "category_id",
         },
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
       },
     },
     {
-      tableName: "CourseCategory",
+      tableName: "course_categories",
       timestamps: false,
+      underscored: true,
     }
   );
 

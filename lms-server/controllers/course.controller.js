@@ -106,7 +106,7 @@ export const getCourseById = async (req, res) => {
         },
         {
           model: db.CourseRating,
-          as: "CourseRatings",
+          as: "ratings",
           attributes: ["ratingId", "rating", "comment", "createdAt"],
           include: [
             {
@@ -134,9 +134,9 @@ export const getCourseById = async (req, res) => {
 
     // Tính trung bình đánh giá
     const avgRating =
-      course.CourseRatings.length > 0
-        ? course.CourseRatings.reduce((sum, r) => sum + r.rating, 0) /
-          course.CourseRatings.length
+      (course.ratings?.length || 0) > 0
+        ? course.ratings.reduce((sum, r) => sum + r.rating, 0) /
+          course.ratings.length
         : 0;
 
     res.status(200).json({
@@ -145,7 +145,7 @@ export const getCourseById = async (req, res) => {
       data: {
         ...course.toJSON(),
         avgRating: avgRating.toFixed(1),
-        totalRatings: course.CourseRatings.length,
+        totalRatings: course.ratings.length,
         studentCount: course.students.length,
       },
     });

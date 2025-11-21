@@ -5,9 +5,10 @@ export default (sequelize) => {
     "Role",
     {
       roleId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        autoIncrement: true,
+        field: "role_id",
       },
       name: {
         type: DataTypes.ENUM("student", "educator", "admin"),
@@ -17,6 +18,7 @@ export default (sequelize) => {
     {
       tableName: "roles",
       timestamps: true,
+      underscored: true,
     }
   );
   return Role;

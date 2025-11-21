@@ -28,6 +28,7 @@ export default (sequelize) => {
       },
       avatarUrl: {
         type: DataTypes.STRING,
+        field: "avatar_url",
       },
       status: {
         type: DataTypes.ENUM("active", "inactive", "banned"),
@@ -35,15 +36,18 @@ export default (sequelize) => {
       },
       emailVerifiedAt: {
         type: DataTypes.DATE,
+        field: "email_verified_at",
       },
       lastLoginAt: {
         type: DataTypes.DATE,
+        field: "last_login_at",
       },
     },
     {
       tableName: "users",
       timestamps: true,
+      underscored: true,
     }
   );
-  return User
+  return User;
 };

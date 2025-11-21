@@ -12,6 +12,9 @@ export default (sequelize) => {
       userId: {
         type: DataTypes.UUID,
         allowNull: false,
+        references: { model: "users", key: "user_id" },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
       content: { type: DataTypes.TEXT },
       isApproved: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -19,6 +22,7 @@ export default (sequelize) => {
     {
       tableName: "testimonials",
       timestamps: true,
+      underscored: true,
     }
   );
   return Testimonial;

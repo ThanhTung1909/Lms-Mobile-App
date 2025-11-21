@@ -20,11 +20,15 @@ export default (sequelize) => {
       courseId: {
         type: DataTypes.UUID,
         allowNull: false,
+        references: { model: "courses", key: "course_id" },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
     },
     {
       tableName: "chapters",
       timestamps: true,
+      underscored: true,
     }
   );
   return Chapter;

@@ -1,7 +1,8 @@
-// seeders/seed.js
+
 import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from "uuid";
 
 import defineUser from "../models/user.model.js";
 import defineRole from "../models/role.model.js";
@@ -17,7 +18,7 @@ import defineCourseCategory from "../models/courseCategory.model.js";
 
 dotenv.config();
 
-// --- Kết nối DB ---
+// ====== Database Connection ======
 const sequelizeServer = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -44,16 +45,17 @@ const sequelizeRoot = new Sequelize(
 
 const seedData = async () => {
   try {
+    // ====== Reset Database ======
     await sequelizeRoot.query(
       `DROP DATABASE IF EXISTS \`${process.env.DB_NAME}\`;`
     );
     await sequelizeRoot.query(`CREATE DATABASE \`${process.env.DB_NAME}\`;`);
-    console.log("✅ Database dropped and created");
+    console.log("✅ Database recreated");
 
     await sequelizeServer.authenticate();
-    console.log("✅ Connected to DB");
+    console.log("✅ Database connected");
 
-    // --- Define models ---
+    // ====== Define Models ======
     const User = defineUser(sequelizeServer);
     const Role = defineRole(sequelizeServer);
     const Course = defineCourse(sequelizeServer);
@@ -66,21 +68,12 @@ const seedData = async () => {
     const Testimonial = defineTestimonial(sequelizeServer);
     const CourseCategory = defineCourseCategory(sequelizeServer);
 
-    // --- Define relationships ---
-    User.belongsToMany(Role, { through: "UserRole", as: "roles" });
-    Role.belongsToMany(User, { through: "UserRole", as: "users" });
+    // ====== Associations ======
+    User.belongsToMany(Role, { through: "user_roles", as: "roles" });
+    Role.belongsToMany(User, { through: "user_roles", as: "users" });
 
     User.hasMany(Course, { foreignKey: "creatorId", as: "createdCourses" });
     Course.belongsTo(User, { foreignKey: "creatorId", as: "creator" });
-
-    User.belongsToMany(Course, {
-      through: "CourseInstructor",
-      as: "instructingCourses",
-    });
-    Course.belongsToMany(User, {
-      through: "CourseInstructor",
-      as: "instructors",
-    });
 
     User.belongsToMany(Course, {
       through: Enrollment,
@@ -88,6 +81,7 @@ const seedData = async () => {
       foreignKey: "userId",
       otherKey: "courseId",
     });
+
     Course.belongsToMany(User, {
       through: Enrollment,
       as: "students",
@@ -95,215 +89,161 @@ const seedData = async () => {
       otherKey: "userId",
     });
 
-    User.hasMany(CourseRating);
-    CourseRating.belongsTo(User);
-    Course.hasMany(CourseRating);
-    CourseRating.belongsTo(Course);
+    Course.hasMany(Chapter, { foreignKey: "courseId", as: "chapters" });
+    Chapter.belongsTo(Course, { foreignKey: "courseId", as: "course" });
+
+    Chapter.hasMany(Lecture, { foreignKey: "chapterId", as: "lectures" });
+    Lecture.belongsTo(Chapter, { foreignKey: "chapterId", as: "chapter" });
 
     Course.belongsToMany(Category, {
       through: CourseCategory,
-      as: "categories",
       foreignKey: "courseId",
       otherKey: "categoryId",
+      as: "categories",
     });
     Category.belongsToMany(Course, {
       through: CourseCategory,
-      as: "courses",
       foreignKey: "categoryId",
       otherKey: "courseId",
+      as: "courses",
     });
-
-    Course.hasMany(Chapter, { foreignKey: "courseId", as: "chapters" });
-    Chapter.belongsTo(Course, { foreignKey: "courseId", as: "course" });
-    Chapter.hasMany(Lecture, { foreignKey: "chapterId", as: "lectures" });
-    Lecture.belongsTo(Chapter, { foreignKey: "chapterId", as: "chapter" });
 
     User.belongsToMany(Lecture, {
       through: UserProgress,
       as: "completedLectures",
     });
+
     Lecture.belongsToMany(User, {
       through: UserProgress,
       as: "completedByUsers",
     });
 
+    User.hasMany(CourseRating);
+    CourseRating.belongsTo(User);
+
+    Course.hasMany(CourseRating);
+    CourseRating.belongsTo(Course);
+
     User.hasMany(Testimonial);
     Testimonial.belongsTo(User);
 
+    // ====== Sync ======
     await sequelizeServer.sync({ force: true });
-    console.log("✅ Database synchronized");
+    console.log("✅ Tables synced");
 
-    // --- Dummy data ---
-    const DEFAULT_PASSWORD = "password123";
-    const allUsers = [
-      {
-        _id: "user_educator_01",
-        name: "DinoTimo",
-        email: "dinotimo@gmail.com",
-        imageUrl: "https://img.clerk.com/...",
-        role: "educator",
-      },
-      {
-        _id: "user_student_01",
-        name: "Thanh Tung",
-        email: "thanhtung@gmail.com",
-        imageUrl: "https://i.pravatar.cc/150?u=user_student_01",
-        role: "student",
-      },
-      {
-        _id: "user_student_02",
-        name: "Minh Tien",
-        email: "minhtien@gmail.com",
-        imageUrl: "https://i.pravatar.cc/150?u=user_student_02",
-        role: "student",
-      },
-      {
-        _id: "user_student_03",
-        name: "Khoi Nguyen",
-        email: "khoinguyen@gmail.com",
-        imageUrl: "https://i.pravatar.cc/150?u=user_student_03",
-        role: "student",
-      },
-    ];
-
-    const dummyCategories = [
-      { _id: "cat_programming", name: "Programming", slug: "programming" },
-      { _id: "cat_web_dev", name: "Web Development", slug: "web-development" },
-    ];
-
-    const dummyCourses = [
-      {
-        _id: "course_js_intro",
-        title: "Introduction to JavaScript",
-        description: "<p>Learn JavaScript basics</p>",
-        price: 49.99,
-        discount: 20,
-        isPublished: true,
-        educatorId: "user_educator_01",
-        enrolledStudentIds: ["user_student_01", "user_student_02"],
-        ratingsData: [{ userId: "user_student_01", rating: 5 }],
-        courseThumbnail:
-          "https://img.youtube.com/vi/CBWnBi-awSA/maxresdefault.jpg",
-        courseContent: [
-          {
-            chapterId: "js_ch1",
-            chapterOrder: 1,
-            chapterTitle: "Getting Started",
-            chapterContent: [
-              {
-                lectureId: "js_ch1_lec1",
-                lectureTitle: "What is JS?",
-                lectureDuration: 16,
-                lectureUrl: "https://youtu.be/CBWnBi-awSA",
-                lectureOrder: 1,
-              },
-              {
-                lectureId: "js_ch1_lec2",
-                lectureTitle: "Setup Env",
-                lectureDuration: 19,
-                lectureUrl: "https://youtu.be/4l87c2aeB4I",
-                lectureOrder: 2,
-              },
-            ],
-          },
-        ],
-      },
-    ];
-
-    // --- Seed roles ---
+    // ====== Seed Roles ======
     await Role.bulkCreate([
-      { roleId: 1, name: "student" },
-      { roleId: 2, name: "educator" },
-      { roleId: 3, name: "admin" },
+      { roleId: uuidv4(), name: "student" },
+      { roleId: uuidv4(), name: "educator" },
+      { roleId: uuidv4(), name: "admin" },
     ]);
 
-    // --- Seed users ---
-    const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
-    for (const u of allUsers) {
-      const user = await User.create({
-        userId: u._id,
-        fullName: u.name,
-        email: u.email,
-        passwordHash: hashedPassword,
-        avatarUrl: u.imageUrl,
-        status: "active",
-      });
-      const role = await Role.findOne({ where: { name: u.role } });
-      if (role) await user.addRole(role);
-    }
+    const roleStudent = await Role.findOne({ where: { name: "student" } });
+    const roleEducator = await Role.findOne({ where: { name: "educator" } });
 
-    // --- Seed categories ---
-    for (const c of dummyCategories) {
-      await Category.create({ categoryId: c._id, name: c.name, slug: c.slug });
-    }
+    // ====== Seed Users ======
+    const password = await bcrypt.hash("password123", 10);
 
-    // --- Seed courses, chapters, lectures, enrollments, ratings ---
-    for (const c of dummyCourses) {
-      const course = await Course.create({
-        courseId: c._id,
-        title: c.title,
-        description: c.description,
-        price: c.price,
-        discount: c.discount,
-        status: c.isPublished ? "published" : "draft",
-        creatorId: c.educatorId,
-        thumbnailUrl: c.courseThumbnail,
-      });
+    const userEducator = await User.create({
+      userId: uuidv4(),
+      fullName: "Dino Timo",
+      email: "dinotimo@gmail.com",
+      passwordHash: password,
+      avatarUrl: "https://img.clerk.com/...",
+    });
 
-      // Categories
-      if (c.title.toLowerCase().includes("javascript")) {
-        const cat = await Category.findByPk("cat_programming");
-        if (cat) await course.addCategory(cat);
-      }
+    const student1 = await User.create({
+      userId: uuidv4(),
+      fullName: "Thanh Tung",
+      email: "thanhtung@gmail.com",
+      passwordHash: password,
+      avatarUrl: "https://i.pravatar.cc/150?u=001",
+    });
 
-      // Chapters & lectures
-      for (const ch of c.courseContent || []) {
-        const chapter = await Chapter.create({
-          chapterId: ch.chapterId,
-          courseId: course.courseId,
-          title: ch.chapterTitle,
-          orderIndex: ch.chapterOrder,
-        });
-        for (const lec of ch.chapterContent || []) {
-          await Lecture.create({
-            lectureId: lec.lectureId,
-            chapterId: chapter.chapterId,
-            title: lec.lectureTitle,
-            videoUrl: lec.lectureUrl,
-            duration: lec.lectureDuration,
-            lectureType: "video",
-            orderIndex: lec.lectureOrder,
-          });
-        }
-      }
+    const student2 = await User.create({
+      userId: uuidv4(),
+      fullName: "Minh Tien",
+      email: "minhtien@gmail.com",
+      passwordHash: password,
+      avatarUrl: "https://i.pravatar.cc/150?u=002",
+    });
 
-      // Enrollments (cập nhật đúng cột userId & courseId)
-      for (const studentId of c.enrolledStudentIds || []) {
-        await Enrollment.create({
-          userId: studentId,
-          courseId: course.courseId,
-          pricePaid: c.price,
-          enrolledAt: new Date(),
-          status: "active",
-        });
-      }
+    await userEducator.addRole(roleEducator);
+    await student1.addRole(roleStudent);
+    await student2.addRole(roleStudent);
 
-      // Ratings
-      for (const rating of c.ratingsData || []) {
-        await CourseRating.create({
-          userId: rating.userId,
-          courseId: course.courseId,
-          rating: rating.rating,
-          comment: "Great course!",
-        });
-      }
-    }
+    // ====== Seed Categories ======
+    const catProgramming = await Category.create({
+      categoryId: uuidv4(),
+      name: "Programming",
+      slug: "programming",
+    });
 
-    console.log("✅ Full seeding completed!");
+    // ====== Seed Course ======
+    const course = await Course.create({
+      courseId: uuidv4(),
+      title: "Introduction to JavaScript",
+      description: "<p>Learn JavaScript basics</p>",
+      price: 49.99,
+      discount: 20,
+      status: "published",
+      thumbnailUrl: "https://img.youtube.com/vi/CBWnBi-awSA/maxresdefault.jpg",
+      creatorId: userEducator.userId,
+    });
+
+    await course.addCategory(catProgramming);
+
+    // ====== Seed Chapters & Lectures ======
+    const chapter1 = await Chapter.create({
+      chapterId: uuidv4(),
+      courseId: course.courseId,
+      title: "Getting Started",
+      orderIndex: 1,
+    });
+
+    const lec1 = await Lecture.create({
+      lectureId: uuidv4(),
+      chapterId: chapter1.chapterId,
+      title: "What is JS?",
+      videoUrl: "https://youtu.be/CBWnBi-awSA",
+      duration: 16,
+      lectureType: "video",
+      orderIndex: 1,
+    });
+
+    const lec2 = await Lecture.create({
+      lectureId: uuidv4(),
+      chapterId: chapter1.chapterId,
+      title: "Setup Env",
+      videoUrl: "https://youtu.be/4l87c2aeB4I",
+      duration: 19,
+      lectureType: "video",
+      orderIndex: 2,
+    });
+
+    // ====== Seed Enrollments ======
+    await Enrollment.create({
+      enrollmentId: uuidv4(),
+      userId: student1.userId,
+      courseId: course.courseId,
+      pricePaid: 49.99,
+      status: "active",
+    });
+
+    // ====== Seed Rating ======
+    await CourseRating.create({
+      ratingId: uuidv4(),
+      userId: student1.userId,
+      courseId: course.courseId,
+      rating: 5,
+      comment: "Great course!",
+    });
+
+    console.log("🎉 SEEDING COMPLETED SUCCESSFULLY!");
     await sequelizeServer.close();
     await sequelizeRoot.close();
-  } catch (err) {
-    console.error("Seeding error:", err);
+  } catch (error) {
+    console.error("❌ Seeding failed:", error);
   }
 };
 

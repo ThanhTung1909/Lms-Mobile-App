@@ -1,4 +1,3 @@
-
 import db from "../models/index.js";
 import * as bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -7,9 +6,7 @@ export const register = async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
 
-    const existingUser = await db.User.findOne({
-      where: { email },
-    });
+    const existingUser = await db.User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -35,10 +32,13 @@ export const register = async (req, res) => {
         id: newUser.userId,
         fullName: newUser.fullName,
         email: newUser.email,
+        roles: studentRole
+          ? [{ roleId: studentRole.roleId, name: studentRole.name }]
+          : [],
       },
     });
   } catch (error) {
-    console.log("Lỗi đăng ký:", error);
+    console.error("Lỗi đăng ký:", error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server",
@@ -50,20 +50,30 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await db.User.findOne({ where: { email } });
+    const user = await db.User.findOne({
+      where: { email },
+      include: [
+        {
+          model: db.Role,
+          as: "roles",
+          attributes: ["roleId", "name"],
+          through: { attributes: [] },
+        },
+      ],
+    });
+
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: "Email hoặc mật khẩu không đùng",
+        message: "Email hoặc mật khẩu không đúng",
       });
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-
     if (!isMatch) {
       return res.status(400).json({
         success: false,
-        message: "Email hoặc mật khẩu không đùng",
+        message: "Email hoặc mật khẩu không đúng",
       });
     }
 
@@ -81,10 +91,12 @@ export const login = async (req, res) => {
         id: user.userId,
         fullName: user.fullName,
         email: user.email,
+        roles:
+          user.roles?.map((r) => ({ roleId: r.roleId, name: r.name })) || [],
       },
     });
   } catch (error) {
-    console.log("Lỗi đăng ký:", error);
+    console.error("Lỗi đăng nhập:", error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server",
@@ -97,13 +109,35 @@ export const getProfile = async (req, res) => {
     const userId = req.user.id;
 
     const user = await db.User.findByPk(userId, {
-      attributes: {exclude: ['passwordHash']},
+      attributes: { exclude: ["passwordHash"] },
       include: [
         {
           model: db.Role,
           as: "roles",
-          attributes: ['roleId',"name"],
+          attributes: ["roleId", "name"],
           through: { attributes: [] },
+        },
+        {
+          model: db.Course,
+          as: "createdCourses",
+          attributes: ["courseId", "title"],
+        },
+        {
+          model: db.Course,
+          as: "instructingCourses",
+          attributes: ["courseId", "title"],
+          through: { attributes: [] },
+        },
+        {
+          model: db.Course,
+          as: "enrolledCourses",
+          attributes: ["courseId", "title"],
+          through: { attributes: [] },
+        },
+        {
+          model: db.CourseRating,
+          as: "ratings",
+          attributes: ["ratingId", "courseId", "rating", "comment"],
         },
       ],
     });
@@ -118,10 +152,10 @@ export const getProfile = async (req, res) => {
     res.json({
       success: true,
       message: "Thông tin người dùng",
-      user: user,
+      user,
     });
   } catch (error) {
-    console.log("Lỗi đăng ký:", error);
+    console.error("Lỗi getProfile:", error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server",
@@ -131,76 +165,69 @@ export const getProfile = async (req, res) => {
 
 // POST /logout
 export const logout = async (req, res) => {
-    try {
-        res.status(200).json({
-            success: true,
-            message: "Đăng xuất thành công",
-        });
-    } catch (error) {
-        console.error("Error in logout:", error);
-        res.status(500).json({
-            success: false,
-            message: "Lỗi khi đăng xuất",
-            error: error.message,
-        });
-    }
+  try {
+    res.status(200).json({
+      success: true,
+      message: "Đăng xuất thành công",
+    });
+  } catch (error) {
+    console.error("Error in logout:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi khi đăng xuất",
+      error: error.message,
+    });
+  }
 };
-
 // POST /change-password
 export const changePassword = async (req, res) => {
-    try {
-        const userId = req.user.userId;
-        const { currentPassword, newPassword } = req.body;
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
 
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({
-                success: false,
-                message: "Thiếu thông tin bắt buộc",
-            });
-        }
-
-        if (newPassword.length < 6) {
-            return res.status(400).json({
-                success: false,
-                message: "Mật khẩu mới phải có ít nhất 6 ký tự",
-            });
-        }
-
-        const user = await db.User.findByPk(userId);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "Không tìm thấy user",
-            });
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-            currentPassword,
-            user.passwordHash
-        );
-        if (!isPasswordValid) {
-            return res.status(401).json({
-                success: false,
-                message: "Mật khẩu hiện tại không đúng",
-            });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const newPasswordHash = await bcrypt.hash(newPassword, salt);
-
-        await user.update({ passwordHash: newPasswordHash });
-
-        res.status(200).json({
-            success: true,
-            message: "Đổi mật khẩu thành công",
-        });
-    } catch (error) {
-        console.error("Error in changePassword:", error);
-        res.status(500).json({
-            success: false,
-            message: "Lỗi khi đổi mật khẩu",
-            error: error.message,
-        });
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu thông tin bắt buộc",
+      });
     }
-};
 
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới phải có ít nhất 6 ký tự",
+      });
+    }
+
+    const user = await db.User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy user",
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Mật khẩu hiện tại không đúng",
+      });
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await user.update({ passwordHash: newPasswordHash });
+
+    res.status(200).json({
+      success: true,
+      message: "Đổi mật khẩu thành công",
+    });
+  } catch (error) {
+    console.error("Error in changePassword:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi khi đổi mật khẩu",
+      error: error.message,
+    });
+  }
+};
