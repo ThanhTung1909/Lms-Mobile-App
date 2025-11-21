@@ -13,12 +13,11 @@ import { useEffect, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/src/providers/AuthProvider";
 
-
 function CustomHeader() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const router = useRouter();
 
-  const router = useRouter()
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -30,30 +29,48 @@ function CustomHeader() {
   }, [pathname]);
 
   const getHeaderContent = () => {
-    switch (true) {
-      case pathname.includes("courses"):
-        return {
-          title: "Your Courses 📚",
-          subtitle: "Continue where you left off",
-        };
-      case pathname.includes("community"):
-        return { title: "Community 💬", subtitle: "Connect & share ideas" };
-      case pathname.includes("my-learning"):
-        return { title: "My Learning 🎓", subtitle: "Keep up your progress" };
-      case pathname.includes("settings"):
-        return {
-          title: user?.fullname || "Setting",
-          subtitle: "Manage your account",
-        };
-      default:
-        return {
-          title: user ? `Hi, ${user.fullname} 👋` : "Hi there 👋",
-          subtitle: "Ready to learn something new?",
-        };
+    if (pathname.includes("/courses")) {
+      return {
+        title: "Your Courses 📚",
+        subtitle: "Continue where you left off",
+      };
     }
+    if (pathname.includes("/community")) {
+      return { title: "Community 💬", subtitle: "Connect & share ideas" };
+    }
+    if (pathname.includes("/my-learning")) {
+      return { title: "My Learning 🎓", subtitle: "Keep up your progress" };
+    }
+    if (pathname.includes("/settings")) {
+      return {
+        title: user?.fullName || "Settings",
+        subtitle: "Manage your account",
+      };
+    }
+
+    return {
+      title: user?.fullName ? `Hi, ${user.fullName} 👋` : "Hi there 👋",
+      subtitle: "Ready to learn something new?",
+    };
   };
 
   const { title, subtitle } = getHeaderContent();
+
+  const renderAvatar = () => {
+    if (user?.avatarUrl) {
+      return <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />;
+    }
+
+    const initial = user?.fullName
+      ? user.fullName.charAt(0).toUpperCase()
+      : "U";
+
+    return (
+      <View style={[styles.avatar, styles.avatarFallback]}>
+        <Text style={styles.avatarText}>{initial}</Text>
+      </View>
+    );
+  };
 
   return (
     <LinearGradient
@@ -85,19 +102,14 @@ function CustomHeader() {
 
         <View style={styles.headerIcons}>
           <TouchableOpacity
-          onPress={() => 
-              router.push("/settings/notifications") 
-            }
-          style={styles.iconBtn}>
+            onPress={() => router.push("/settings/notifications")}
+            style={styles.iconBtn}
+          >
             <Ionicons name="notifications-outline" size={22} color="#1e3a8a" />
           </TouchableOpacity>
-          <TouchableOpacity>
-            <Image
-              source={{
-                uri: user?.avatarUrl || "https://i.pravatar.cc/150?img=12",
-              }}
-              style={styles.avatar}
-            />
+
+          <TouchableOpacity onPress={() => router.push("/(tabs)/settings")}>
+            {renderAvatar()}
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -118,11 +130,15 @@ export default function TabsLayout() {
           fontWeight: "500",
         },
         tabBarStyle: {
-          height: Platform.OS === "android" ? 100 : 100,
+          height: Platform.OS === "android" ? 70 : 90,
           paddingBottom: Platform.OS === "android" ? 10 : 30,
           paddingTop: 10,
           borderTopWidth: 0,
-          elevation: 5,
+          elevation: 10,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
           backgroundColor: "#fff",
         },
       }}
@@ -182,7 +198,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings/index"
         options={{
-          title: "Setting",
+          title: "Settings",
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? "settings" : "settings-outline"}
@@ -192,47 +208,30 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="courses/[id]"
-        options={{
-          href: null,
-          headerShown: false,
-        }}
+        options={{ href: null, headerShown: false }}
       />
       <Tabs.Screen
         name="courses/enroll/[id]"
-        options={{
-          href: null,
-          headerShown: false,
-        }}
+        options={{ href: null, headerShown: false }}
       />
       <Tabs.Screen
         name="my-learning/lesson/[id]"
-        options={{
-          href: null,
-          headerShown: false,
-        }}
+        options={{ href: null, headerShown: false }}
       />
       <Tabs.Screen
         name="community/[id]"
-        options={{
-          href: null,
-          headerShown: false,
-        }}
+        options={{ href: null, headerShown: false }}
       />
       <Tabs.Screen
         name="community/create-post"
-        options={{
-          href: null,
-          headerShown: false,
-        }}
+        options={{ href: null, headerShown: false }}
       />
       <Tabs.Screen
         name="settings/notifications"
-        options={{
-          href: null,
-          headerShown: false,
-        }}
+        options={{ href: null, headerShown: false }}
       />
     </Tabs>
   );
@@ -273,11 +272,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+
   avatar: {
     width: 38,
     height: 38,
     borderRadius: 19,
     borderWidth: 1.5,
     borderColor: "#1e3a8a",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+
+  avatarFallback: {
+    backgroundColor: "#e0e7ff",
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e3a8a",
   },
 });

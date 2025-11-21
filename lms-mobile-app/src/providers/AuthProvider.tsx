@@ -16,7 +16,12 @@ interface AuthContextType {
   isAuthenticating: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  register: (
+    fullName: string,
+    email: string,
+    password: string,
+  ) => Promise<boolean>;
+  logout: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
 }
 
@@ -79,8 +84,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
+  const register = async (
+    fullName: string,
+    email: string,
+    password: string,
+  ): Promise<boolean> => {
+    setError(null);
+    setIsAuthenticating(true);
+
+    try {
+      const response = await authApi.register({ fullName, email, password });
+      const { success, message } = response.data;
+
+      if (success) {
+        return true;
+      } else {
+        setError(message || "Đăng ký thất bại");
+        return false;
+      }
+    } catch (err: any) {
+      console.error("Register Error:", err);
+      const msg =
+        err.response?.data?.message || "Lỗi kết nối hoặc email đã tồn tại";
+      setError(msg);
+      return false;
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      await AsyncStorage.removeItem(USER_INFO_KEY);
+      delete apiClient.defaults.headers.common["Authorization"];
+      setUser(null);
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
   };
 
   const completeOnboarding = async () => {
@@ -99,6 +140,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isAuthenticating,
     error,
     login,
+    register,
     logout,
     completeOnboarding,
   };
