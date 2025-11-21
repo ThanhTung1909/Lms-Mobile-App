@@ -1,6 +1,6 @@
-import { Stack, useRouter, usePathname, Slot } from "expo-router";
+import { Slot, useRouter, useSegments } from "expo-router"; // Thêm useSegments
 import { View, ActivityIndicator } from "react-native";
-import { StatusBar } from "expo-status-bar"; 
+import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "@/src/providers/AuthProvider";
@@ -8,31 +8,29 @@ import { AuthProvider, useAuth } from "@/src/providers/AuthProvider";
 function RootLayoutNav() {
   const { user, isOnboarded, isAppLoading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
+  const segments = useSegments(); 
 
   useEffect(() => {
-    if (isAppLoading) {
+    if (isAppLoading) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+    const inOnboardingGroup = segments[0] === "(onboarding)";
+
+    if (!isOnboarded && !inOnboardingGroup) {
+      router.replace("/(onboarding)/splash"); 
       return;
     }
 
-    const inAuthGroup = pathname.startsWith("/(auth)");
-    const inOnboardingGroup = pathname.startsWith("/(onboarding)");
-    const inApp =
-      pathname.startsWith("/(tabs)")
-
-    if (!isOnboarded && !inOnboardingGroup) {
-      router.replace("/(onboarding)/splash");
-      return
-    } 
     if (isOnboarded && !user && !inAuthGroup) {
       router.replace("/(auth)/login");
-      return
-    } 
-    if (isOnboarded && user && (inAuthGroup || inOnboardingGroup)) {
+      return;
+    }
+
+    if (user && (inAuthGroup || inOnboardingGroup)) {
       router.replace("/(tabs)/home");
       return;
     }
-  }, [isOnboarded, user, isAppLoading, pathname]);
+  }, [isOnboarded, user, isAppLoading, segments]);
 
   if (isAppLoading) {
     return (
@@ -41,6 +39,7 @@ function RootLayoutNav() {
       </View>
     );
   }
+
   return <Slot />;
 }
 

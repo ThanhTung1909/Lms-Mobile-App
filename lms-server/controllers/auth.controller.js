@@ -83,6 +83,9 @@ export const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    const mainRole =
+      user.roles && user.roles.length > 0 ? user.roles[0].name : "student";
+
     return res.status(200).json({
       success: true,
       message: "Đăng nhập thành công",
@@ -91,8 +94,8 @@ export const login = async (req, res) => {
         id: user.userId,
         fullName: user.fullName,
         email: user.email,
-        roles:
-          user.roles?.map((r) => ({ roleId: r.roleId, name: r.name })) || [],
+        avatarUrl: user.avatarUrl,
+        role: mainRole,
       },
     });
   } catch (error) {
@@ -207,7 +210,10 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash
+    );
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,

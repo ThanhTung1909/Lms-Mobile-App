@@ -2,14 +2,18 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { User } from "@/src/types/user";
 import { allUsers } from "@/src/assets/assets";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authApi } from "../api/modules/authApi";
+import apiClient from "../api/apiClient";
 
 const ONBOARDING_KEY = "hasOnboarded";
+const TOKEN_KEY = "userToken";
+const USER_INFO_KEY = "userInfo";
 
 interface AuthContextType {
   user: User | null;
   isOnboarded: boolean | null;
-  isAppLoading: boolean; 
-  isAuthenticating: boolean; 
+  isAppLoading: boolean;
+  isAuthenticating: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -45,22 +49,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setError(null);
     setIsAuthenticating(true);
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const foundUser = allUsers.find(
-          (u) => u.email.toLowerCase() === email.toLowerCase(),
-        );
-        if (foundUser && password === "password123") {
-          setUser(foundUser);
-          setIsAuthenticating(false);
-          resolve(true);
-        } else {
-          setError("Invalid email or password.");
-          setIsAuthenticating(false);
-          resolve(false);
-        }
-      }, 1000);
-    });
+    try {
+      const response = await authApi.login({ email, password });
+
+      const { success, token, user, message } = response.data;
+
+      if (success) {
+        await AsyncStorage.setItem(TOKEN_KEY, token);
+
+        await AsyncStorage.setItem(USER_INFO_KEY, JSON.stringify(user));
+
+        setUser(user);
+
+        apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+        return true;
+      } else {
+        setError(message || "Đăng nhập thất bại");
+        return false;
+      }
+    } catch (err: any) {
+      console.error("Login Error:", err);
+      const msg =
+        err.response?.data?.message || "Lỗi kết nối hoặc sai thông tin";
+      setError(msg);
+      return false;
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const logout = () => {

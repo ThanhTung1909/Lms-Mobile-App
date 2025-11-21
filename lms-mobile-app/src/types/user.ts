@@ -1,10 +1,9 @@
-
 export type UserRole = "educator" | "student";
 
 export type User = {
   _id: string;
-  name: string;
+  fullname: string;
   email: string;
-  imageUrl: string;
+  avatarUrl: string;
   role: UserRole;
 };

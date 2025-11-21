@@ -42,12 +42,12 @@ function CustomHeader() {
         return { title: "My Learning 🎓", subtitle: "Keep up your progress" };
       case pathname.includes("settings"):
         return {
-          title: user?.name || "Setting",
+          title: user?.fullname || "Setting",
           subtitle: "Manage your account",
         };
       default:
         return {
-          title: user ? `Hi, ${user.name} 👋` : "Hi there 👋",
+          title: user ? `Hi, ${user.fullname} 👋` : "Hi there 👋",
           subtitle: "Ready to learn something new?",
         };
     }
@@ -94,7 +94,7 @@ function CustomHeader() {
           <TouchableOpacity>
             <Image
               source={{
-                uri: user?.imageUrl || "https://i.pravatar.cc/150?img=12",
+                uri: user?.avatarUrl || "https://i.pravatar.cc/150?img=12",
               }}
               style={styles.avatar}
             />
