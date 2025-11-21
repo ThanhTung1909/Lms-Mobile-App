@@ -1,11 +1,12 @@
-import { Slot, useRouter, useLocalSearchParams } from "expo-router";
-import { useEffect } from "react";
+import { Slot } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { View, StatusBar } from "react-native";
 
 export default function OnboardingLayout() {
-  const router = useRouter();
-
-  // Có thể điều hướng từng màn theo button "Tiếp tục" hoặc auto sau timeout ở mỗi screen.
-  // Hoặc bạn chỉ cần <Slot/> thôi nếu điều hướng nằm trong từng màn hình.
-
-  return <Slot />;
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <Slot />
+    </SafeAreaView>
+  );
 }

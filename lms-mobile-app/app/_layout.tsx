@@ -1,53 +1,56 @@
-// app/_layout.tsx
-import { Slot, useRouter, useRootNavigationState } from "expo-router";
+import { Stack, useRouter, usePathname, Slot } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
-import { useEffect, useState } from "react";
+import { StatusBar } from "expo-status-bar"; 
+import { useEffect } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthProvider, useAuth } from "@/src/providers/AuthProvider";
 
-export default function RootLayout() {
+function RootLayoutNav() {
+  const { user, isOnboarded, isAppLoading } = useAuth();
   const router = useRouter();
-  const rootNavigation = useRootNavigationState();
-
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isOnboarded, setIsOnboarded] = useState<boolean>(false);
-  const [loading, setLoading] = useState(true);
-
-  // Fake check – sau này thay bằng AsyncStorage hoặc API
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsOnboarded(false); // giả sử user CHƯA xem onboarding
-      setIsAuthenticated(false); // giả sử user chưa login
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!rootNavigation?.key || loading) return;
-
-    if (!isOnboarded) {
-      router.replace("/(onboarding)/splash");
-    } else if (!isAuthenticated) {
-      router.replace("/(auth)/login");
-    } else {
-      router.replace("/(tabs)/home");
+    if (isAppLoading) {
+      return;
     }
-  }, [loading, isAuthenticated, isOnboarded, rootNavigation?.key]);
 
-  if (loading || !rootNavigation?.key) {
+    const inAuthGroup = pathname.startsWith("/(auth)");
+    const inOnboardingGroup = pathname.startsWith("/(onboarding)");
+    const inApp =
+      pathname.startsWith("/(tabs)")
+
+    if (!isOnboarded && !inOnboardingGroup) {
+      router.replace("/(onboarding)/splash");
+      return
+    } 
+    if (isOnboarded && !user && !inAuthGroup) {
+      router.replace("/(auth)/login");
+      return
+    } 
+    if (isOnboarded && user && (inAuthGroup || inOnboardingGroup)) {
+      router.replace("/(tabs)/home");
+      return;
+    }
+  }, [isOnboarded, user, isAppLoading, pathname]);
+
+  if (isAppLoading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "white",
-        }}
-      >
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#001f54" />
       </View>
     );
   }
-
   return <Slot />;
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <SafeAreaProvider>
+        <RootLayoutNav />
+        <StatusBar style="dark" />
+      </SafeAreaProvider>
+    </AuthProvider>
+  );
 }
