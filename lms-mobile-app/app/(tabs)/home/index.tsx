@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,13 +8,16 @@ import {
   TouchableOpacity,
   FlatList,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { dummyCourses, dummyTestimonial } from "@/src/assets/assets";
+import { dummyTestimonial } from "@/src/assets/assets";
 import CourseCard from "@/src/components/specific/CourseCard";
+import { fetchAllCourses } from "@/src/api/modules/courseApi";
+import { Course } from "@/src/types/course";
 
 import AccentureLogo from "@/src/assets/accenture_logo.svg";
 import AdobeLogo from "@/src/assets/adobe_logo.svg";
@@ -22,21 +25,54 @@ import MicrosoftLogo from "@/src/assets/microsoft_logo.svg";
 import PaypalLogo from "@/src/assets/paypal_logo.svg";
 import WalmartLogo from "@/src/assets/walmart_logo.svg";
 
+
 export default function HomeScreen() {
   const router = useRouter();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const topRatedCourses = dummyCourses
-    .map((course) => {
-      const ratings = course.courseRatings.map((r) => r.rating);
-      const avgRating =
-        ratings.length > 0
-          ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-          : 0;
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const res = await fetchAllCourses();
+        if (res.success) {
+          setCourses(res.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
-      return { ...course, avgRating };
-    })
-    .sort((a, b) => b.avgRating - a.avgRating)
-    .slice(0, 3);
+  const topRatedCourses = useMemo(() => {
+    return [...courses]
+      .map((course) => {
+        const ratings = course.ratings || [];
+        const avgRating =
+          ratings.length > 0
+            ? ratings.reduce((a, b) => a + b.rating, 0) / ratings.length
+            : 0;
+        return { ...course, avgRating };
+      })
+      .sort((a, b) => b.avgRating - a.avgRating)
+      .slice(0, 3);
+  }, [courses]);
+
+  if (loading) {
+    return (
+      <View
+        style={[
+          styles.safeArea,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color="#2D6CE5" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -44,7 +80,7 @@ export default function HomeScreen() {
 
       <FlatList
         data={topRatedCourses}
-        keyExtractor={(item) => item._id.toString()}
+        keyExtractor={(item) => item.courseId} 
         renderItem={({ item }) => <CourseCard item={item} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
@@ -52,7 +88,6 @@ export default function HomeScreen() {
           <>
             {/* Hero section */}
             <View style={styles.hero}>
-              {/* Slogan */}
               <Text style={styles.heroSmallTitle}>Upgrade Your Skills</Text>
               <Text style={styles.heroTitle}>
                 Learn from the{" "}
@@ -168,49 +203,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 40,
   },
-  header: {
-    marginTop: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  greeting: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#222",
-  },
-
-  subGreeting: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 2,
-  },
-
-  headerIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F5F6FA",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 6,
-  },
-  logo: { fontSize: 26, fontWeight: "700", color: "#2D6CE5" },
-  addBtn: { flexDirection: "row", alignItems: "center" },
-  addText: { color: "#2D6CE5", marginLeft: 4, fontWeight: "600" },
-
   hero: {
     alignItems: "center",
     marginTop: 30,
     paddingHorizontal: 16,
   },
-
   heroSmallTitle: {
     color: "#2D6CE5",
     fontWeight: "600",
@@ -218,7 +215,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     letterSpacing: 0.5,
   },
-
   heroTitle: {
     fontSize: 26,
     fontWeight: "800",
@@ -226,11 +222,9 @@ const styles = StyleSheet.create({
     color: "#222",
     lineHeight: 34,
   },
-
   highlight: {
     color: "#2D6CE5",
   },
-
   heroSubtitle: {
     color: "#555",
     textAlign: "center",
@@ -239,7 +233,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     maxWidth: 320,
   },
-
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -254,14 +247,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-
   searchInput: {
     flex: 1,
     marginLeft: 8,
     color: "#333",
     fontSize: 15,
   },
-
   searchBtn: {
     backgroundColor: "#2D6CE5",
     padding: 10,
@@ -269,19 +260,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   partnerContainer: {
     marginTop: 28,
     alignItems: "center",
   },
-
   partnerTitle: {
     fontSize: 13,
     color: "#777",
     marginBottom: 10,
     textAlign: "center",
   },
-
   partnerRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -289,7 +277,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 18,
   },
-
   partnerLogoContainer: {
     paddingHorizontal: 8,
     opacity: 0.9,
@@ -340,7 +327,6 @@ const styles = StyleSheet.create({
   stars: { color: "#f1b500", marginVertical: 4 },
   feedback: { color: "#333", fontSize: 14, marginBottom: 6, lineHeight: 20 },
   readMore: { color: "#2D6CE5", fontWeight: "500", fontSize: 13 },
-
   ctaSection: { alignItems: "center", marginTop: 40 },
   ctaTitle: {
     fontSize: 18,
@@ -365,5 +351,4 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   getStartedText: { color: "#fff", fontWeight: "600" },
-  learnMoreText: { color: "#2D6CE5", fontWeight: "600" },
 });

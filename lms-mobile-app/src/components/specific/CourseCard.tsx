@@ -4,7 +4,6 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Course } from "@/src/types/course";
-import { allUsers } from "@/src/assets/assets";
 
 type CourseCardProps = {
   item: Course;
@@ -12,36 +11,38 @@ type CourseCardProps = {
 
 const CourseCard: React.FC<CourseCardProps> = ({ item }) => {
   const router = useRouter();
-  const educator = allUsers.find(u => u._id === item.educator);
-  const instructorName = educator ? educator.name : "Unknown Instructor";
 
+  const instructorName = item.creator?.fullName || "Unknown Instructor";
+
+  const ratings = item.ratings || [];
   const avgRating =
-    item.courseRatings && item.courseRatings.length > 0
+    ratings.length > 0
       ? (
-          item.courseRatings.reduce((sum, r) => sum + r.rating, 0) /
-          item.courseRatings.length
+          ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
         ).toFixed(1)
       : "0.0";
 
-  const studentCount = item.enrolledStudents ? item.enrolledStudents.length : 0;
+  const ratingCount = ratings.length;
 
-  const finalPrice = item.discount
-    ? item.coursePrice * (1 - item.discount / 100)
-    : item.coursePrice;
+  const originalPrice = parseFloat(item.price) || 0;
+  const discountAmount = parseFloat(item.discount) || 0;
+
+  const finalPrice = originalPrice - discountAmount;
 
   return (
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.8}
-      onPress={() => router.push({
-        pathname: "/(tabs)/courses/[id]",
-        params: { id: item._id }
-      })}
+      onPress={() =>
+        router.push({
+          pathname: "/(tabs)/courses/[id]",
+          params: { id: item.courseId },
+        })
+      }
     >
       <Image
         source={{
-          uri:
-            item.courseThumbnail 
+          uri: item.thumbnailUrl,
         }}
         style={styles.image}
         contentFit="cover"
@@ -50,7 +51,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ item }) => {
 
       <View style={styles.content}>
         <Text numberOfLines={2} style={styles.title}>
-          {item.courseTitle}
+          {item.title}
         </Text>
         <Text style={styles.instructor}>{instructorName}</Text>
 
@@ -69,10 +70,12 @@ const CourseCard: React.FC<CourseCardProps> = ({ item }) => {
                 />
               ))}
             </View>
-            <Text style={styles.ratingCount}>({studentCount})</Text>
+            <Text style={styles.ratingCount}>({ratingCount})</Text>
           </View>
 
-          <Text style={styles.price}>${finalPrice.toFixed(2)}</Text>
+          <Text style={styles.price}>
+            ${finalPrice < 0 ? 0 : finalPrice.toFixed(2)}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -95,7 +98,8 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 180,
-    resizeMode: "cover",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   content: {
     padding: 12,

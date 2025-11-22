@@ -1,40 +1,51 @@
+export type UserBasic = {
+  userId: string;
+  fullName: string;
+  email?: string;
+  avatarUrl?: string;
+};
+
+export type Category = {
+  categoryId: string;
+  name: string;
+};
 
 export type Lecture = {
   lectureId: string;
-  lectureTitle: string;
-  lectureDuration: number;
-  lectureUrl: string;
-  isPreviewFree: boolean;
-  lectureOrder: number;
+  title: string;
+  videoUrl: string;
+  orderIndex: number;
 };
 
 export type Chapter = {
   chapterId: string;
-  chapterOrder: number;
-  chapterTitle: string;
-  chapterContent: Lecture[];
+  title: string;
+  orderIndex: number;
+  lectures: Lecture[];
 };
 
-
 export type Rating = {
-  userId: string;
+  ratingId: string;
   rating: number;
-  _id: string;
+  comment: string;
+  createdAt: string;
+  user: UserBasic;
 };
 
 export type Course = {
-  _id: string;
-  courseTitle: string;
-  courseThumbnail: string;
-  courseDescription: string;
-  coursePrice: number;
-  isPublished: boolean;
-  discount?: number;
-  educator: string; 
-  enrolledStudents?: string[]; 
-  courseContent: Chapter[];
-  courseRatings?: Rating[];
-  createdAt: string; 
-  updatedAt: string; 
-  __v?: number;
+  courseId: string;
+  title: string;
+  description: string;
+  price: string; 
+  discount: string; 
+  thumbnailUrl: string;
+  status: string;
+  creatorId: string;
+  createdAt: string;
+  updatedAt: string;
+  creator: UserBasic;
+  categories: Category[];
+  chapters: Chapter[];
+  ratings?: Rating[]; 
+  enrolledStudents?: any[];
 };
