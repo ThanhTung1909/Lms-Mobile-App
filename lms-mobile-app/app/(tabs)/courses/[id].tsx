@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   ScrollView,
   View,
@@ -7,16 +7,14 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
-  Animated,
   ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import RenderHtml from "react-native-render-html";
 
-// Imports
 import { useAuth } from "@/src/providers/AuthProvider";
 import { Colors, Spacing } from "@/src/constants/theme";
 import CoursePreview from "@/src/components/specific/CoursePreview";
@@ -34,36 +32,51 @@ export default function CourseDetail() {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
-
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const courseId = Array.isArray(id) ? id[0] : id;
-        if (!courseId) return;
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
 
-        const response = await fetchCourseByID(courseId);
-        if (response.success) {
-          setCourse(response.data);
+      const loadData = async () => {
+        try {
+          if (!course) setLoading(true);
 
-          if (response.data.chapters?.[0]?.lectures?.[0]?.videoUrl) {
-            setPlayingVideoUrl(response.data.chapters[0].lectures[0].videoUrl);
+          const courseId = Array.isArray(id) ? id[0] : id;
+          if (!courseId) return;
+
+          const response = await fetchCourseByID(courseId);
+
+          if (isActive && response.success) {
+            setCourse(response.data);
+
+            if (
+              !playingVideoUrl &&
+              response.data.chapters?.[0]?.lectures?.[0]?.videoUrl
+            ) {
+              setPlayingVideoUrl(
+                response.data.chapters[0].lectures[0].videoUrl,
+              );
+            }
           }
+        } catch (error) {
+          console.error("Error loading course detail:", error);
+        } finally {
+          if (isActive) setLoading(false);
         }
-      } catch (error) {
-        console.error("Error loading course detail:", error);
-        Alert.alert("Error", "Could not load course details.");
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
-    loadData();
-  }, [id]);
+      loadData();
 
-  if (loading) {
+      return () => {
+        isActive = false;
+      };
+    }, [id]),
+  );
+
+  const currentUserId = user?.userId || user?._id || (user as any)?.id;
+
+  if (loading && !course) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={Colors.common.primary} />
@@ -89,9 +102,13 @@ export default function CourseDetail() {
   const discountVal = parseFloat(course.discount) || 0;
   const finalPrice = (originalPrice - discountVal).toFixed(2);
 
-  const isEnrolled = course.students?.some((s) => s.userId === user?.userId);
+  const isEnrolled =
+    course?.students?.some((s) => String(s.userId) === String(currentUserId)) ??
+    false;
+
   const isCreator =
-    user?.role === "educator" && user.userId === course.creatorId;
+    user?.role === "educator" &&
+    String(course?.creatorId) === String(currentUserId);
 
   const renderTabs = () => (
     <View style={styles.tabContainer}>
@@ -350,11 +367,7 @@ export default function CourseDetail() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         <View style={styles.header}>
-          <CoursePreview
-            course={course}
-            customVideoUrl={playingVideoUrl}
-          />
-
+          <CoursePreview course={course} customVideoUrl={playingVideoUrl} />
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backBtn}
@@ -368,9 +381,7 @@ export default function CourseDetail() {
           {course.creator && (
             <View style={styles.educatorRow}>
               <Image
-                source={{
-                  uri: course.creator.avatarUrl,
-                }}
+                source={{ uri: course.creator.avatarUrl }}
                 style={styles.avatar}
               />
               <View>
@@ -408,7 +419,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: Colors.light.background,
   },
-
   header: { height: 230, backgroundColor: "#1e293b" },
   backBtn: {
     position: "absolute",
@@ -419,7 +429,6 @@ const styles = StyleSheet.create({
     padding: 8,
     zIndex: 10,
   },
-
   infoContainer: {
     padding: Spacing.medium,
     borderBottomWidth: 1,
@@ -445,7 +454,6 @@ const styles = StyleSheet.create({
   },
   educatorName: { fontWeight: "600", fontSize: 16, color: Colors.light.text },
   educatorEmail: { fontSize: 14, color: Colors.light.textSecondary },
-
   tabContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -460,16 +468,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  activeTabItem: {
-    borderBottomColor: Colors.common.primary,
-  },
+  activeTabItem: { borderBottomColor: Colors.common.primary },
   tabText: {
     fontSize: 15,
     fontWeight: "500",
     color: Colors.light.textSecondary,
   },
   activeTabText: { color: Colors.common.primary, fontWeight: "700" },
-
   contentSection: { padding: Spacing.medium },
   sectionTitle: {
     fontSize: 18,
@@ -477,7 +482,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: Spacing.medium,
   },
-
   chapterContainer: { marginBottom: Spacing.large },
   chapterTitle: {
     fontSize: 16,
@@ -497,7 +501,6 @@ const styles = StyleSheet.create({
   },
   lectureTitle: { fontSize: 15, color: Colors.light.text, marginBottom: 4 },
   lectureDuration: { fontSize: 13, color: Colors.light.textSecondary },
-
   reviewBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -509,11 +512,7 @@ const styles = StyleSheet.create({
   reviewAvatar: { width: 40, height: 40, borderRadius: 20 },
   reviewText: { fontSize: 15, color: Colors.light.text, fontWeight: "600" },
   reviewDate: { fontSize: 12, color: Colors.light.textSecondary },
-  reviewRating: {
-    fontSize: 14,
-    color: "#F1C40F",
-    marginTop: 2,
-  },
+  reviewRating: { fontSize: 14, color: "#F1C40F", marginTop: 2 },
   reviewComment: {
     fontSize: 14,
     color: Colors.light.textSecondary,
@@ -525,7 +524,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   enrollBar: {
     position: "absolute",
     bottom: 30,

@@ -57,13 +57,6 @@ export const stripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  console.log("🔹 Webhook received!");
-  console.log("🔹 Sig:", sig ? "Yes" : "No");
-  console.log(
-    "🔹 Body Type:",
-    Buffer.isBuffer(req.body) ? "Buffer" : typeof req.body
-  );
-
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
@@ -78,10 +71,6 @@ export const stripeWebhook = async (req, res) => {
     case "payment_intent.succeeded": {
       const { userId, courseId } = paymentIntent.metadata;
       const amountPaid = paymentIntent.amount / 100;
-
-      console.log(
-        `💰 Payment succeeded for User ${userId}, Course ${courseId}, Amount: ${amountPaid}`
-      );
 
       try {
         await db.Payment.update(
@@ -100,10 +89,10 @@ export const stripeWebhook = async (req, res) => {
             pricePaid: amountPaid, 
             enrolledAt: new Date(), 
           });
-          console.log("✅ Enrollment created successfully.");
+          console.log("Enrollment created successfully.");
         }
       } catch (err) {
-        console.error("❌ Error updating DB on success:", err);
+        console.error("Error updating DB on success:", err);
       }
       break;
     }
@@ -113,7 +102,7 @@ export const stripeWebhook = async (req, res) => {
       const errorMessage =
         paymentIntent.last_payment_error?.message || "Unknown error";
 
-      console.log(`❌ Payment failed for User ${userId}: ${errorMessage}`);
+      console.log(`Payment failed for User ${userId}: ${errorMessage}`);
 
       try {
         await db.Payment.update(
@@ -123,7 +112,7 @@ export const stripeWebhook = async (req, res) => {
           { where: { stripePaymentId: paymentIntent.id } }
         );
       } catch (err) {
-        console.error("❌ Error updating DB on failure:", err);
+        console.error("Error updating DB on failure:", err);
       }
       break;
     }
