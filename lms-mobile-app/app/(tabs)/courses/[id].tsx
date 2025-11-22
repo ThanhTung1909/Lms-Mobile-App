@@ -1,3 +1,4 @@
+import React, { useEffect, useState, useRef } from "react";
 import {
   ScrollView,
   View,
@@ -6,51 +7,98 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
-  Animated
+  Animated,
+  ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { dummyCourses, dummyEducatorData, allUsers } from "@/src/assets/assets";
-import { useAuth } from "@/src/providers/AuthProvider";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import RenderHtml from "react-native-render-html";
-import { useRef, useState } from "react";
-import { Course } from "@/src/types/course";
+
+// Imports
+import { useAuth } from "@/src/providers/AuthProvider";
 import { Colors, Spacing } from "@/src/constants/theme";
 import CoursePreview from "@/src/components/specific/CoursePreview";
 
+import { Course } from "@/src/types/course";
+import { fetchCourseByID } from "@/src/api/modules/courseApi";
+
 const { width } = Dimensions.get("window");
-const HEADER_HEIGHT = 230;
 
 export default function CourseDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("overview");
-
   const { user } = useAuth();
 
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
 
-  const course: Course | undefined = dummyCourses.find(
-    (item) => item._id === id,
-  );
+  // State để lưu video đang phát (được chọn từ danh sách bài học)
+  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
 
-  const educator = allUsers.find((u) => u._id === course?.educator);
+  // 1. Fetch Course Data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const courseId = Array.isArray(id) ? id[0] : id;
+        if (!courseId) return;
+
+        const response = await fetchCourseByID(courseId);
+        if (response.success) {
+          setCourse(response.data);
+
+          // Tự động chọn video đầu tiên của chương đầu tiên làm preview mặc định (nếu có)
+          if (response.data.chapters?.[0]?.lectures?.[0]?.videoUrl) {
+            setPlayingVideoUrl(response.data.chapters[0].lectures[0].videoUrl);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading course detail:", error);
+        Alert.alert("Error", "Could not load course details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.common.primary} />
+      </SafeAreaView>
+    );
+  }
 
   if (!course) {
     return (
       <SafeAreaView style={styles.center}>
         <Text style={{ color: Colors.light.text }}>Course not found</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ marginTop: 10 }}
+        >
+          <Text style={{ color: Colors.common.primary }}>Go Back</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  const discountedPrice = (
-    course.coursePrice -
-    (course.coursePrice * (course.discount ?? 0)) / 100
-  ).toFixed(2);
+  // Calculate Price
+  const originalPrice = parseFloat(course.price) || 0;
+  const discountVal = parseFloat(course.discount) || 0;
+  const finalPrice = (originalPrice - discountVal).toFixed(2);
 
+  // Check User Enrolled Logic
+  const isEnrolled = course.students?.some((s) => s.userId === user?.userId);
+  const isCreator =
+    user?.role === "educator" && user.userId === course.creatorId;
+
+  // Render Functions
   const renderTabs = () => (
     <View style={styles.tabContainer}>
       {["Overview", "Lessons", "Reviews"].map((tab) => (
@@ -82,7 +130,9 @@ export default function CourseDetail() {
           <View style={styles.contentSection}>
             <RenderHtml
               contentWidth={width - Spacing.medium * 2}
-              source={{ html: course.courseDescription }}
+              source={{
+                html: course.description || "<p>No description available.</p>",
+              }}
               tagsStyles={{
                 h2: {
                   fontSize: 18,
@@ -95,6 +145,12 @@ export default function CourseDetail() {
                   color: Colors.light.textSecondary,
                   lineHeight: 22,
                 },
+                ul: { marginLeft: 10 },
+                li: {
+                  fontSize: 15,
+                  color: Colors.light.textSecondary,
+                  marginBottom: 4,
+                },
               }}
             />
           </View>
@@ -103,54 +159,110 @@ export default function CourseDetail() {
         return (
           <View style={styles.contentSection}>
             <Text style={styles.sectionTitle}>Course Content</Text>
-            {course.courseContent.map((chapter) => (
-              <View key={chapter.chapterId} style={styles.chapterContainer}>
-                <Text style={styles.chapterTitle}>{chapter.chapterTitle}</Text>
-                {chapter.chapterContent.map((lecture) => (
-                  <View key={lecture.lectureId} style={styles.lectureRow}>
-                    <Ionicons
-                      name="play-circle-outline"
-                      size={24}
-                      color={Colors.common.primary}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.lectureTitle}>
-                        {lecture.lectureTitle}
-                      </Text>
-                      <Text style={styles.lectureDuration}>
-                        {lecture.lectureDuration} mins{" "}
-                        {lecture.isPreviewFree && (
-                          <Text style={{ color: Colors.common.success }}>
-                            • Free Preview
+            {course.chapters && course.chapters.length > 0 ? (
+              course.chapters.map((chapter) => (
+                <View key={chapter.chapterId} style={styles.chapterContainer}>
+                  <Text style={styles.chapterTitle}>{chapter.title}</Text>
+                  {chapter.lectures.map((lecture, index) => {
+                    // LOGIC FIX:
+                    // 1. Bài đầu tiên (index === 0) của mỗi chương là Free
+                    // 2. Hoặc nếu user đã mua khóa học (isEnrolled) thì xem được hết
+                    // 3. Hoặc nếu user là người tạo khóa học (isCreator)
+                    const isFree = index === 0;
+                    const canWatch = isFree || isEnrolled || isCreator;
+
+                    // Kiểm tra xem video này có đang được phát không
+                    const isPlaying = playingVideoUrl === lecture.videoUrl;
+
+                    return (
+                      <TouchableOpacity
+                        key={lecture.lectureId}
+                        style={[
+                          styles.lectureRow,
+                          isPlaying && {
+                            backgroundColor: "#f0f9ff",
+                            borderRadius: 8,
+                          },
+                        ]}
+                        onPress={() => {
+                          if (canWatch) {
+                            setPlayingVideoUrl(lecture.videoUrl);
+                          } else {
+                            Alert.alert(
+                              "Locked Content",
+                              "Please enroll in this course to watch the full content.",
+                            );
+                          }
+                        }}
+                      >
+                        <Ionicons
+                          name={
+                            canWatch
+                              ? isPlaying
+                                ? "pause-circle"
+                                : "play-circle"
+                              : "lock-closed"
+                          }
+                          size={24}
+                          color={
+                            canWatch
+                              ? Colors.common.primary
+                              : Colors.light.textSecondary
+                          }
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              styles.lectureTitle,
+                              isPlaying && {
+                                color: Colors.common.primary,
+                                fontWeight: "700",
+                              },
+                            ]}
+                          >
+                            {lecture.title}
                           </Text>
-                        )}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ))}
+                          <Text style={styles.lectureDuration}>
+                            {lecture.duration || 0} mins{" "}
+                            {/* Logic hiển thị text Free Preview */}
+                            {isFree && !isEnrolled && (
+                              <Text
+                                style={{
+                                  color: Colors.common.success,
+                                  fontWeight: "600",
+                                }}
+                              >
+                                • Free Preview
+                              </Text>
+                            )}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: Colors.light.textSecondary }}>
+                No lessons available.
+              </Text>
+            )}
           </View>
         );
       case "reviews":
         return (
           <View style={styles.contentSection}>
             <Text style={styles.sectionTitle}>Student Feedback</Text>
-            {course.courseRatings?.length ? (
-              course.courseRatings.map((r, i) => {
-                const studentInfo = allUsers.find((u) => u._id === r.userId);
-                const studentName = studentInfo
-                  ? studentInfo.name
-                  : "Anonymous Student";
-                const studentImageUrl = studentInfo
-                  ? studentInfo.imageUrl
-                  : null;
+            {course.ratings && course.ratings.length > 0 ? (
+              course.ratings.map((r) => {
+                const studentName = r.user?.fullName || "Anonymous";
+                const studentAvatar = r.user?.avatarUrl;
 
                 return (
-                  <View key={r._id || i} style={styles.reviewBox}>
-                    {studentImageUrl ? (
+                  <View key={r.ratingId} style={styles.reviewBox}>
+                    {studentAvatar ? (
                       <Image
-                        source={{ uri: studentImageUrl }}
+                        source={{ uri: studentAvatar }}
                         style={styles.reviewAvatar}
                       />
                     ) : (
@@ -165,9 +277,22 @@ export default function CourseDetail() {
                       </View>
                     )}
 
-                    <View>
-                      <Text style={styles.reviewText}>{studentName}</Text>
+                    <View style={{ flex: 1 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Text style={styles.reviewText}>{studentName}</Text>
+                        <Text style={styles.reviewDate}>
+                          {new Date(r.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
                       <Text style={styles.reviewRating}>⭐ {r.rating} / 5</Text>
+                      {r.comment && (
+                        <Text style={styles.reviewComment}>{r.comment}</Text>
+                      )}
                     </View>
                   </View>
                 );
@@ -185,44 +310,46 @@ export default function CourseDetail() {
   };
 
   const renderEnrollBar = () => {
-   
-    if (user?.role === 'educator' && user._id === course.educator) {
+    if (isCreator) {
       return (
-        <TouchableOpacity style={styles.enrollBtn} onPress={() => Alert.alert("Navigate to Edit Screen")}>
+        <TouchableOpacity
+          style={styles.enrollBtn}
+          onPress={() => Alert.alert("Navigate to Edit Screen")}
+        >
           <Text style={styles.enrollText}>Edit Course</Text>
         </TouchableOpacity>
       );
     }
-    const isEnrolled = course.enrolledStudents?.includes(user?._id || '');
-    
-    if (user?.role === 'student' && isEnrolled) {
+
+    if (isEnrolled) {
       return (
-        <TouchableOpacity 
-            style={styles.enrollBtn} 
-            onPress={() => router.push({
-                pathname: "/(tabs)/my-learning/lesson/[id]",
-                params: { id: course._id }
-            })}
+        <TouchableOpacity
+          style={styles.enrollBtn}
+          onPress={() =>
+            router.push({
+              pathname: "/(tabs)/my-learning/lesson/[id]",
+              params: { id: course.courseId },
+            })
+          }
         >
           <Text style={styles.enrollText}>Go to Course</Text>
         </TouchableOpacity>
       );
     }
 
-    
     return (
-      <TouchableOpacity 
-          style={styles.enrollBtn}
-          onPress={() => {
-            if (user) { 
-              router.push({
-                pathname: "/(tabs)/courses/enroll/[id]",
-                params: { id: course._id }
-              });
-            } else { 
-              router.replace("/(auth)/login");
-            }
-          }}
+      <TouchableOpacity
+        style={styles.enrollBtn}
+        onPress={() => {
+          if (user) {
+            router.push({
+              pathname: "/(tabs)/courses/enroll/[id]",
+              params: { id: course.courseId },
+            });
+          } else {
+            router.replace("/(auth)/login");
+          }
+        }}
       >
         <Text style={styles.enrollText}>Enroll Now</Text>
       </TouchableOpacity>
@@ -236,7 +363,19 @@ export default function CourseDetail() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         <View style={styles.header}>
-          <CoursePreview course={course} />
+          {/* 
+            QUAN TRỌNG: Component CoursePreview cần nhận prop `videoUrl` 
+            hoặc `customVideoUrl` (tùy vào cách bạn viết component đó) 
+            để phát video được chọn thay vì video intro mặc định.
+            
+            Ở đây tôi truyền thêm prop `selectedVideoUrl`
+          */}
+          <CoursePreview
+            course={course}
+            // Truyền URL video đang chọn vào đây
+            customVideoUrl={playingVideoUrl}
+          />
+
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backBtn}
@@ -246,18 +385,20 @@ export default function CourseDetail() {
         </View>
 
         <View style={styles.infoContainer}>
-          <Text style={styles.title}>{course.courseTitle}</Text>
-          {educator && (
+          <Text style={styles.title}>{course.title}</Text>
+          {course.creator && (
             <View style={styles.educatorRow}>
               <Image
-                source={{ uri: educator.imageUrl }}
+                source={{
+                  uri: course.creator.avatarUrl || "https://i.pravatar.cc/150",
+                }}
                 style={styles.avatar}
               />
               <View>
-                <Text style={styles.educatorName}>{educator.name}</Text>
-                <Text style={styles.educatorEmail}>
-                  {educator.email}
+                <Text style={styles.educatorName}>
+                  {course.creator.fullName}
                 </Text>
+                <Text style={styles.educatorEmail}>{course.creator.email}</Text>
               </View>
             </View>
           )}
@@ -269,8 +410,10 @@ export default function CourseDetail() {
 
       <View style={styles.enrollBar}>
         <View>
-          <Text style={styles.price}>${discountedPrice}</Text>
-          <Text style={styles.oldPrice}>${course.coursePrice}</Text>
+          <Text style={styles.price}>${finalPrice}</Text>
+          {discountVal > 0 && (
+            <Text style={styles.oldPrice}>${originalPrice.toFixed(2)}</Text>
+          )}
         </View>
         {renderEnrollBar()}
       </View>
@@ -294,7 +437,7 @@ const styles = StyleSheet.create({
     left: Spacing.medium,
     backgroundColor: "rgba(0,0,0,0.4)",
     borderRadius: 20,
-    padding: Spacing.small,
+    padding: 8,
     zIndex: 10,
   },
 
@@ -304,7 +447,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.light.borderColor,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
     color: Colors.light.text,
     marginBottom: Spacing.small,
@@ -315,7 +458,12 @@ const styles = StyleSheet.create({
     marginTop: Spacing.medium,
     gap: 12,
   },
-  avatar: { width: 45, height: 45, borderRadius: 22.5 },
+  avatar: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: "#eee",
+  },
   educatorName: { fontWeight: "600", fontSize: 16, color: Colors.light.text },
   educatorEmail: { fontSize: 14, color: Colors.light.textSecondary },
 
@@ -345,7 +493,7 @@ const styles = StyleSheet.create({
 
   contentSection: { padding: Spacing.medium },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: Colors.light.text,
     marginBottom: Spacing.medium,
@@ -353,7 +501,7 @@ const styles = StyleSheet.create({
 
   chapterContainer: { marginBottom: Spacing.large },
   chapterTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "600",
     color: Colors.light.text,
     marginBottom: Spacing.medium,
@@ -366,13 +514,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: Spacing.medium,
     paddingVertical: Spacing.small,
+    paddingHorizontal: 4,
   },
   lectureTitle: { fontSize: 15, color: Colors.light.text, marginBottom: 4 },
   lectureDuration: { fontSize: 13, color: Colors.light.textSecondary },
 
   reviewBox: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: Spacing.medium,
     paddingVertical: Spacing.medium,
     borderBottomWidth: 1,
@@ -380,10 +529,17 @@ const styles = StyleSheet.create({
   },
   reviewAvatar: { width: 40, height: 40, borderRadius: 20 },
   reviewText: { fontSize: 15, color: Colors.light.text, fontWeight: "600" },
+  reviewDate: { fontSize: 12, color: Colors.light.textSecondary },
   reviewRating: {
+    fontSize: 14,
+    color: "#F1C40F",
+    marginTop: 2,
+  },
+  reviewComment: {
     fontSize: 14,
     color: Colors.light.textSecondary,
     marginTop: 4,
+    lineHeight: 20,
   },
   avatarFallback: {
     backgroundColor: Colors.light.lightGray,
@@ -403,6 +559,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.medium,
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderColor,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   price: { fontSize: 22, fontWeight: "bold", color: Colors.common.primary },
   oldPrice: {
@@ -413,8 +573,8 @@ const styles = StyleSheet.create({
   enrollBtn: {
     backgroundColor: Colors.common.primary,
     borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
   },
   enrollText: { color: Colors.common.white, fontWeight: "bold", fontSize: 16 },
 });

@@ -1,9 +1,10 @@
 export type UserRole = "educator" | "student";
 
 export type User = {
-  _id: string;
+  userId: string;
+  _id?: string;
   fullName: string;
   email: string;
-  avatarUrl: string;
+  avatarUrl?: string;
   role: UserRole;
 };

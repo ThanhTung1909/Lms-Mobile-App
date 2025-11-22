@@ -1,9 +1,11 @@
+
 export type UserBasic = {
   userId: string;
   fullName: string;
   email?: string;
-  avatarUrl?: string;
+  avatarUrl?: string; 
 };
+
 
 export type Category = {
   categoryId: string;
@@ -15,6 +17,10 @@ export type Lecture = {
   title: string;
   videoUrl: string;
   orderIndex: number;
+  duration?: number;       
+  lectureType?: 'video' | 'quiz' | 'text'; 
+  content?: string | null; 
+  isPreviewFree?: boolean;
 };
 
 export type Chapter = {
@@ -29,23 +35,32 @@ export type Rating = {
   rating: number;
   comment: string;
   createdAt: string;
-  user: UserBasic;
+  user: UserBasic; 
+};
+
+export type Student = {
+  userId: string;
 };
 
 export type Course = {
   courseId: string;
   title: string;
-  description: string;
-  price: string; 
-  discount: string; 
+  description: string; 
+  price: string;       
+  discount: string;    
   thumbnailUrl: string;
-  status: string;
+  status: string;      
   creatorId: string;
   createdAt: string;
   updatedAt: string;
+  
   creator: UserBasic;
   categories: Category[];
   chapters: Chapter[];
-  ratings?: Rating[]; 
-  enrolledStudents?: any[];
+  ratings: Rating[];
+
+  students?: Student[];      
+  avgRating?: string | number; 
+  totalRatings?: number;     
+  studentCount?: number;     
 };

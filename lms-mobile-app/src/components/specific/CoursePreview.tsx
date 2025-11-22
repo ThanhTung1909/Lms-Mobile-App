@@ -1,48 +1,65 @@
-import { View, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
+import React, { useCallback, useState, useEffect } from "react";
+import { View, StyleSheet, Dimensions } from "react-native";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import YoutubeIframe from "react-native-youtube-iframe";
 import { Course } from "@/src/types/course";
-import { useCallback, useState } from "react";
 
 const { width } = Dimensions.get("window");
 
 interface CoursePreviewProps {
   course: Course;
+  customVideoUrl?: string | null;
 }
 
-export default function CoursePreview({ course }: CoursePreviewProps) {
-  const router = useRouter();
+export default function CoursePreview({
+  course,
+  customVideoUrl,
+}: CoursePreviewProps) {
   const [videoError, setVideoError] = useState(false);
 
-
   const getYouTubeVideoId = (url?: string) => {
-    const match = url?.match(/(?:v=|\/)([0-9A-Za-z_-]{11})(?:\?|&|$)/);
-    return match ? match[1] : null;
+    if (!url) return null;
+    const regExp =
+      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11 ? match[2] : null;
   };
 
-  const firstLectureUrl =
-    course.courseContent?.[0]?.chapterContent?.[0]?.lectureUrl;
-  const firstVideoId = getYouTubeVideoId(firstLectureUrl);
+  const defaultVideoUrl = course.chapters?.[0]?.lectures?.[0]?.videoUrl;
+  const videoUrlToPlay = customVideoUrl || defaultVideoUrl;
+
+  const videoId = getYouTubeVideoId(videoUrlToPlay);
+
+  useEffect(() => {
+    setVideoError(false);
+  }, [videoId]);
 
   const handleError = useCallback(() => {
     setVideoError(true);
   }, []);
+
+  const shouldAutoPlay = !!customVideoUrl;
+
   return (
     <View style={styles.header}>
-      {firstVideoId && !videoError ? (
+      {videoId && !videoError ? (
         <YoutubeIframe
           height={230}
           width={width}
-          videoId={firstVideoId}
-          play={false}
+          videoId={videoId}
+          play={shouldAutoPlay}
           onError={handleError}
+          webViewProps={{
+            allowsFullscreenVideo: true,
+            userAgent:
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36",
+          }}
         />
       ) : (
         <Image
-          source={{ uri: course.courseThumbnail }}
+          source={{ uri: course.thumbnailUrl }}
           style={styles.thumbnail}
+          contentFit="cover"
         />
       )}
     </View>
@@ -55,20 +72,10 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 230,
     backgroundColor: "#000",
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
     overflow: "hidden",
   },
   thumbnail: {
     width: "100%",
     height: "100%",
-  },
-  backBtn: {
-    position: "absolute",
-    top: 45,
-    left: 15,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    borderRadius: 20,
-    padding: 6,
   },
 });
