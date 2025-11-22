@@ -1,14 +1,16 @@
-import { Slot, useRouter, useSegments } from "expo-router"; // Thêm useSegments
+import { Slot, useRouter, useSegments } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "@/src/providers/AuthProvider";
 
+import { StripeProvider } from "@stripe/stripe-react-native";
+
 function RootLayoutNav() {
   const { user, isOnboarded, isAppLoading } = useAuth();
   const router = useRouter();
-  const segments = useSegments(); 
+  const segments = useSegments();
 
   useEffect(() => {
     if (isAppLoading) return;
@@ -17,7 +19,7 @@ function RootLayoutNav() {
     const inOnboardingGroup = segments[0] === "(onboarding)";
 
     if (!isOnboarded && !inOnboardingGroup) {
-      router.replace("/(onboarding)/splash"); 
+      router.replace("/(onboarding)/splash");
       return;
     }
 
@@ -44,12 +46,20 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const STRIPE_PUBLISHABLE_KEY =
+    process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+
   return (
     <AuthProvider>
-      <SafeAreaProvider>
-        <RootLayoutNav />
-        <StatusBar style="dark" />
-      </SafeAreaProvider>
+      <StripeProvider
+        publishableKey={STRIPE_PUBLISHABLE_KEY}
+        merchantIdentifier="merchant.identifier"
+      >
+        <SafeAreaProvider>
+          <RootLayoutNav />
+          <StatusBar style="dark" />
+        </SafeAreaProvider>
+      </StripeProvider>
     </AuthProvider>
   );
 }

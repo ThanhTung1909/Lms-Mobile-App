@@ -25,3 +25,18 @@ export const fetchCourseByID = async (
     throw error;
   }
 };
+
+export const createPaymentIntent = async (courseId: string) => {
+  try {
+    const response = await apiClient.post("/payment/create-intent", {
+      courseId,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error(
+      "Error creating payment intent:",
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};

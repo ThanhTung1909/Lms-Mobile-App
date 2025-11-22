@@ -10,38 +10,83 @@ import {
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { dummyCourses } from "@/src/assets/assets";
-import { Colors, Spacing } from "@/src/constants/theme";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import { useStripe } from "@stripe/stripe-react-native"; 
+
+import { Colors, Spacing } from "@/src/constants/theme";
 import { useAuth } from "@/src/providers/AuthProvider";
+
+import { createPaymentIntent, fetchCourseByID } from "@/src/api/modules/courseApi";
+
+import { Course } from "@/src/types/course";
 
 export default function EnrollmentScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-
   const { user } = useAuth();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe(); 
 
-  const course = dummyCourses.find((c) => c._id === id);
+ 
+  const [course, setCourse] = useState<Course | null>(null);
+  const [isFetching, setIsFetching] = useState(true); 
+  const [isProcessing, setIsProcessing] = useState(false);
+
+
+  useEffect(() => {
+    const loadCourse = async () => {
+      try {
+        const courseId = Array.isArray(id) ? id[0] : id;
+        if (!courseId) return;
+
+        const res = await fetchCourseByID(courseId);
+        if (res.success) {
+          setCourse(res.data);
+        }
+      } catch (error) {
+        console.error("Error fetching course:", error);
+        Alert.alert("Error", "Failed to load course details.");
+        router.back();
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    loadCourse();
+  }, [id]);
 
   useEffect(() => {
     if (!course || !user) return;
-    if (user.role === "educator" && user._id === course.educator) {
-      Alert.alert("Invalid Action", "You are the educator of this course.", [
+
+    if (user.role === "educator" && user.userId === course.creatorId) {
+      Alert.alert("Invalid Action", "You are the creator of this course.", [
         { text: "OK", onPress: () => router.back() },
       ]);
       return;
     }
-    const isEnrolled = course.enrolledStudents?.includes(user._id);
+
+    const isEnrolled = course.students?.some((s) => s.userId === user.userId);
     if (isEnrolled) {
       Alert.alert(
         "Already Enrolled",
         "You have already enrolled in this course.",
-        [{ text: "OK", onPress: () => router.back() }],
+        [
+          {
+            text: "Go to My Learning",
+            onPress: () => router.replace("/(tabs)/my-learning"),
+          },
+        ],
       );
     }
   }, [course, user, router]);
+
+  if (isFetching) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.common.primary} />
+      </SafeAreaView>
+    );
+  }
 
   if (!course) {
     return (
@@ -51,12 +96,11 @@ export default function EnrollmentScreen() {
     );
   }
 
-  const originalPrice = course.coursePrice;
-  const discountPercentage = course.discount ?? 0;
-  const discountAmount = (originalPrice * discountPercentage) / 100;
-  const finalPrice = originalPrice - discountAmount;
+  const originalPrice = parseFloat(course.price) || 0;
+  const discountVal = parseFloat(course.discount) || 0;
+  const finalPrice = originalPrice - discountVal;
 
-  const handleEnroll = () => {
+  const handleEnroll = async () => {
     if (!user) {
       Alert.alert(
         "Please Login",
@@ -72,25 +116,61 @@ export default function EnrollmentScreen() {
       return;
     }
 
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      Alert.alert(
-        "Enrollment Successful!",
-        `You have successfully enrolled in "${course.courseTitle}".`,
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(tabs)/my-learning"),
-          },
-        ],
-      );
-    }, 1500);
+    try {
+      setIsProcessing(true);
+
+      const response = await createPaymentIntent(course.courseId);
+
+      if (!response.success || !response.clientSecret) {
+        Alert.alert("Error", "Could not initialize payment transaction.");
+        setIsProcessing(false);
+        return;
+      }
+
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: "E-Learning App",
+        paymentIntentClientSecret: response.clientSecret,
+        defaultBillingDetails: {
+          name: user.fullName,
+          email: user.email,
+        },
+        returnURL: "lmsmobileapp://stripe-redirect", 
+      });
+
+      if (initError) {
+        Alert.alert("Error", initError.message);
+        setIsProcessing(false);
+        return;
+      }
+
+      const { error: paymentError } = await presentPaymentSheet();
+
+      if (paymentError) {
+        if (paymentError.code !== "Canceled") {
+          Alert.alert("Payment Failed", paymentError.message);
+        }
+      } else {
+        Alert.alert(
+          "Enrollment Successful!",
+          `You have successfully enrolled in "${course.title}".`,
+          [
+            {
+              text: "Start Learning",
+              onPress: () => router.replace("/(tabs)/my-learning"),
+            },
+          ],
+        );
+      }
+    } catch (error) {
+      console.error("Payment Error:", error);
+      Alert.alert("Error", "An unexpected error occurred.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
@@ -104,23 +184,21 @@ export default function EnrollmentScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Tóm tắt khóa học */}
         <View style={styles.courseCard}>
           <Image
-            source={{ uri: course.courseThumbnail }}
+            source={{ uri: course.thumbnailUrl }}
             style={styles.thumbnail}
           />
           <View style={styles.courseInfo}>
             <Text style={styles.courseTitle} numberOfLines={2}>
-              {course.courseTitle}
+              {course.title}
             </Text>
             <Text style={styles.enrolledText}>
-              You are about to enroll in this course.
+              Instructor: {course.creator?.fullName}
             </Text>
           </View>
         </View>
 
-        {/* Chi tiết thanh toán */}
         <Text style={styles.summaryTitle}>Order Summary</Text>
         <View style={styles.summaryCard}>
           <View style={styles.priceRow}>
@@ -128,11 +206,9 @@ export default function EnrollmentScreen() {
             <Text style={styles.priceValue}>${originalPrice.toFixed(2)}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>
-              Discount ({discountPercentage}%)
-            </Text>
+            <Text style={styles.priceLabel}>Discount</Text>
             <Text style={styles.priceValueDiscount}>
-              -${discountAmount.toFixed(2)}
+              -${discountVal.toFixed(2)}
             </Text>
           </View>
           <View style={styles.divider} />
@@ -143,17 +219,18 @@ export default function EnrollmentScreen() {
         </View>
       </ScrollView>
 
-      {/* Nút xác nhận dính ở cuối */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.confirmButton, isLoading && styles.disabledButton]}
+          style={[styles.confirmButton, isProcessing && styles.disabledButton]}
           onPress={handleEnroll}
-          disabled={isLoading}
+          disabled={isProcessing}
         >
-          {isLoading ? (
+          {isProcessing ? (
             <ActivityIndicator color={Colors.common.white} />
           ) : (
-            <Text style={styles.confirmButtonText}>Confirm Purchase</Text>
+            <Text style={styles.confirmButtonText}>
+              Pay ${finalPrice.toFixed(2)}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -234,11 +311,11 @@ const styles = StyleSheet.create({
   divider: {},
   footer: {
     position: "absolute",
-    bottom: 15,
+    bottom: 0,
     left: 0,
     right: 0,
     padding: Spacing.medium,
-    paddingBottom: Spacing.large,
+    paddingBottom: 30,
     backgroundColor: Colors.light.background,
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderColor,

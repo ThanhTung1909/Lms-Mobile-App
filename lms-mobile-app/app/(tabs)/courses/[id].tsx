@@ -35,10 +35,8 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // State để lưu video đang phát (được chọn từ danh sách bài học)
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
 
-  // 1. Fetch Course Data
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -50,7 +48,6 @@ export default function CourseDetail() {
         if (response.success) {
           setCourse(response.data);
 
-          // Tự động chọn video đầu tiên của chương đầu tiên làm preview mặc định (nếu có)
           if (response.data.chapters?.[0]?.lectures?.[0]?.videoUrl) {
             setPlayingVideoUrl(response.data.chapters[0].lectures[0].videoUrl);
           }
@@ -88,17 +85,14 @@ export default function CourseDetail() {
     );
   }
 
-  // Calculate Price
   const originalPrice = parseFloat(course.price) || 0;
   const discountVal = parseFloat(course.discount) || 0;
   const finalPrice = (originalPrice - discountVal).toFixed(2);
 
-  // Check User Enrolled Logic
   const isEnrolled = course.students?.some((s) => s.userId === user?.userId);
   const isCreator =
     user?.role === "educator" && user.userId === course.creatorId;
 
-  // Render Functions
   const renderTabs = () => (
     <View style={styles.tabContainer}>
       {["Overview", "Lessons", "Reviews"].map((tab) => (
@@ -164,14 +158,8 @@ export default function CourseDetail() {
                 <View key={chapter.chapterId} style={styles.chapterContainer}>
                   <Text style={styles.chapterTitle}>{chapter.title}</Text>
                   {chapter.lectures.map((lecture, index) => {
-                    // LOGIC FIX:
-                    // 1. Bài đầu tiên (index === 0) của mỗi chương là Free
-                    // 2. Hoặc nếu user đã mua khóa học (isEnrolled) thì xem được hết
-                    // 3. Hoặc nếu user là người tạo khóa học (isCreator)
                     const isFree = index === 0;
                     const canWatch = isFree || isEnrolled || isCreator;
-
-                    // Kiểm tra xem video này có đang được phát không
                     const isPlaying = playingVideoUrl === lecture.videoUrl;
 
                     return (
@@ -224,7 +212,6 @@ export default function CourseDetail() {
                           </Text>
                           <Text style={styles.lectureDuration}>
                             {lecture.duration || 0} mins{" "}
-                            {/* Logic hiển thị text Free Preview */}
                             {isFree && !isEnrolled && (
                               <Text
                                 style={{
@@ -363,16 +350,8 @@ export default function CourseDetail() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         <View style={styles.header}>
-          {/* 
-            QUAN TRỌNG: Component CoursePreview cần nhận prop `videoUrl` 
-            hoặc `customVideoUrl` (tùy vào cách bạn viết component đó) 
-            để phát video được chọn thay vì video intro mặc định.
-            
-            Ở đây tôi truyền thêm prop `selectedVideoUrl`
-          */}
           <CoursePreview
             course={course}
-            // Truyền URL video đang chọn vào đây
             customVideoUrl={playingVideoUrl}
           />
 
@@ -390,7 +369,7 @@ export default function CourseDetail() {
             <View style={styles.educatorRow}>
               <Image
                 source={{
-                  uri: course.creator.avatarUrl || "https://i.pravatar.cc/150",
+                  uri: course.creator.avatarUrl,
                 }}
                 style={styles.avatar}
               />
