@@ -7,100 +7,10 @@ const UserProgress = db.UserProgress;
 const Lecture = db.Lecture;
 const Chapter = db.Chapter;
 
-// GET /profile
-export const getProfile = async (req, res) => {
-    try {
-        const userId = req.user.userId;
-
-        const user = await User.findByPk(userId, {
-            attributes: { exclude: ['passwordHash'] },
-            include: [{
-                model: db.Role,
-                attributes: ['roleId', 'name'],
-                through: { attributes: [] }
-            }]
-        });
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "Không tìm thấy user"
-            });
-        }
-
-        const enrolledCoursesCount = await Enrollment.count({
-            where: { userId }
-        });
-
-        const createdCoursesCount = await Course.count({
-            where: { creatorId: userId }
-        });
-
-        res.status(200).json({
-            success: true,
-            message: "Lấy thông tin profile thành công",
-            data: {
-                ...user.toJSON(),
-                stats: {
-                    enrolledCourses: enrolledCoursesCount,
-                    createdCourses: createdCoursesCount
-                }
-            }
-        });
-
-    } catch (error) {
-        console.error("Error in getProfile:", error);
-        res.status(500).json({
-            success: false,
-            message: "Lỗi khi lấy thông tin profile",
-            error: error.message
-        });
-    }
-};
-
-// PUT /profile
-export const updateProfile = async (req, res) => {
-    try {
-        const userId = req.user.userId;
-        const { fullName, avatarUrl } = req.body;
-
-        const user = await User.findByPk(userId);
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "Không tìm thấy user"
-            });
-        }
-
-        await user.update({
-            fullName: fullName || user.fullName,
-            avatarUrl: avatarUrl || user.avatarUrl
-        });
-
-        const userWithoutPassword = user.toJSON();
-        delete userWithoutPassword.passwordHash;
-
-        res.status(200).json({
-            success: true,
-            message: "Cập nhật profile thành công",
-            data: userWithoutPassword
-        });
-
-    } catch (error) {
-        console.error("Error in updateProfile:", error);
-        res.status(500).json({
-            success: false,
-            message: "Lỗi khi cập nhật profile",
-            error: error.message
-        });
-    }
-};
-
 // GET /enrolled-courses
 export const getEnrolledCourses = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id;
         const { status, page = 1, limit = 10 } = req.query;
 
         const user = await User.findByPk(userId, {
