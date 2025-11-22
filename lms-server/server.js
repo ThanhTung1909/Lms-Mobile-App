@@ -5,19 +5,20 @@ import "dotenv/config";
 import db from "./models/index.js";
 import mainRouter from "./routes/index.js";
 import connectCloudinary from "./configs/cloudinary.js";
-
-import paymentRoutes from "./routes/payment.routes.js";
+import { stripeWebhook } from "./controllers/payment.controller.js";
 
 // Initialize Express
 const app = express();
 
-app.use("/api/v1/payment", paymentRoutes);
+app.post(
+  "/api/v1/payment/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhook
+);
 
 // Middlewares
 app.use(express.json());
 app.use(cors());
-
-
 
 // Routes
 app.get("/", (req, res) => {
@@ -28,7 +29,6 @@ app.use("/api/v1", mainRouter);
 
 // connect cloudinary
 connectCloudinary();
-
 
 const startServer = async () => {
   try {
@@ -54,7 +54,7 @@ const startServer = async () => {
 
 startServer();
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`🚀 Server is running locally on port ${PORT}`);
