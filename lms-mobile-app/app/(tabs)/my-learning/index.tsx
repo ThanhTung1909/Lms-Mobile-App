@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
-import { userApi } from "@/src/api/modules/userApi"; 
+import { userApi } from "@/src/api/modules/userApi";
 
 interface Creator {
   userId: string;
@@ -21,14 +21,21 @@ interface Creator {
 interface CourseProgress {
   completed: number;
   total: number;
-  percentage: number; 
+  percentage: number;
 }
 
 interface CourseData {
   courseId: string;
   title: string;
+  description?: string;
+  price?: string;
+  discount?: string;
   thumbnailUrl: string;
-  creator: Creator;
+  status: string;
+  creatorId: string;
+  createdAt: string;
+  updatedAt: string;
+  creator?: Creator;
   progress: CourseProgress;
 }
 
@@ -37,6 +44,22 @@ interface EnrollmentItem {
   enrolledAt: string;
   pricePaid: string;
   course: CourseData;
+}
+
+interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+interface ApiEnrollmentResponse {
+  success: boolean;
+  message: string;
+  data: {
+    enrollments: EnrollmentItem[];
+    pagination: Pagination;
+  };
 }
 
 interface Achievement {
@@ -69,8 +92,10 @@ export default function MyLearningScreen() {
     try {
       const response = await userApi.getEnrolledCourses();
 
-      if (response && response.success) {
-        setEnrollments(response.data.enrollments);
+      const apiResponse = response as ApiEnrollmentResponse;
+
+      if (apiResponse && apiResponse.success) {
+        setEnrollments(apiResponse.data.enrollments);
       }
     } catch (error) {
       console.error("Lỗi khi tải danh sách khóa học:", error);
@@ -107,7 +132,6 @@ export default function MyLearningScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-
       <Text style={styles.headerTitle}>Khoá học của tôi</Text>
 
       <Text style={styles.sectionTitle}>Tiến độ học tập</Text>
@@ -115,8 +139,17 @@ export default function MyLearningScreen() {
       {enrollments.length > 0 ? (
         enrollments.map((item) => {
           const { course } = item;
-          const progressPercent = course.progress?.percentage || 0;
-          const creatorName = course.creator?.fullName || "Không xác định";
+          const progressPercent = course.progress
+            ? course.progress.percentage
+            : 0;
+          const completedLessons = course.progress
+            ? course.progress.completed
+            : 0;
+          const totalLessons = course.progress ? course.progress.total : 0;
+
+          const creatorName = course.creator
+            ? course.creator.fullName
+            : "Giảng viên";
 
           return (
             <TouchableOpacity
@@ -130,11 +163,7 @@ export default function MyLearningScreen() {
               style={styles.card}
             >
               <Image
-                source={
-                  course.thumbnailUrl
-                    ? { uri: course.thumbnailUrl }
-                    : require("@/src/assets/images/placeholder.png") 
-                }
+                source={course.thumbnailUrl ? { uri: course.thumbnailUrl } : ""}
                 style={styles.thumbnail}
                 contentFit="cover"
                 transition={500}
@@ -146,6 +175,7 @@ export default function MyLearningScreen() {
                 </Text>
                 <Text style={styles.educatorName}>GV: {creatorName}</Text>
 
+                {/* Thanh Progress Bar */}
                 <View style={styles.progressContainer}>
                   <View style={styles.progressBarBackground}>
                     <View
@@ -160,9 +190,9 @@ export default function MyLearningScreen() {
                   </Text>
                 </View>
 
+                {/* Text hiển thị số bài đã học */}
                 <Text style={styles.statsText}>
-                  {course.progress.completed}/{course.progress.total} bài hoàn
-                  thành
+                  {completedLessons}/{totalLessons} bài hoàn thành
                 </Text>
               </View>
             </TouchableOpacity>
@@ -270,7 +300,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#007BFF", // Màu xanh chủ đạo
+    backgroundColor: "#007BFF",
     borderRadius: 4,
   },
   progressText: {
