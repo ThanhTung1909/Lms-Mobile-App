@@ -59,7 +59,10 @@ export const stripeWebhook = async (req, res) => {
 
   console.log("🔹 Webhook received!");
   console.log("🔹 Sig:", sig ? "Yes" : "No");
-  console.log("🔹 Body Type:", Buffer.isBuffer(req.body) ? "Buffer" : typeof req.body);
+  console.log(
+    "🔹 Body Type:",
+    Buffer.isBuffer(req.body) ? "Buffer" : typeof req.body
+  );
 
   let event;
   try {
@@ -70,11 +73,15 @@ export const stripeWebhook = async (req, res) => {
   }
 
   const paymentIntent = event.data.object;
-  
+
   switch (event.type) {
     case "payment_intent.succeeded": {
       const { userId, courseId } = paymentIntent.metadata;
-      console.log(`💰 Payment succeeded for User ${userId}, Course ${courseId}`);
+      const amountPaid = paymentIntent.amount / 100;
+
+      console.log(
+        `💰 Payment succeeded for User ${userId}, Course ${courseId}, Amount: ${amountPaid}`
+      );
 
       try {
         await db.Payment.update(
@@ -82,16 +89,18 @@ export const stripeWebhook = async (req, res) => {
           { where: { stripePaymentId: paymentIntent.id } }
         );
         const existingEnrollment = await db.Enrollment.findOne({
-            where: { userId, courseId }
+          where: { userId, courseId },
         });
 
         if (!existingEnrollment) {
-            await db.Enrollment.create({
-              userId,
-              courseId,
-              status: "active",
-            });
-            console.log("✅ Enrollment created successfully.");
+          await db.Enrollment.create({
+            userId,
+            courseId,
+            status: "active",
+            pricePaid: amountPaid, 
+            enrolledAt: new Date(), 
+          });
+          console.log("✅ Enrollment created successfully.");
         }
       } catch (err) {
         console.error("❌ Error updating DB on success:", err);
@@ -101,16 +110,15 @@ export const stripeWebhook = async (req, res) => {
 
     case "payment_intent.payment_failed": {
       const { userId, courseId } = paymentIntent.metadata;
-      const errorMessage = paymentIntent.last_payment_error?.message || "Unknown error";
-      
+      const errorMessage =
+        paymentIntent.last_payment_error?.message || "Unknown error";
+
       console.log(`❌ Payment failed for User ${userId}: ${errorMessage}`);
 
       try {
-
         await db.Payment.update(
-          { 
+          {
             status: "failed",
-
           },
           { where: { stripePaymentId: paymentIntent.id } }
         );
