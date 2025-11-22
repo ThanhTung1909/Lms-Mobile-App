@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,17 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  useWindowDimensions,
+  Modal,
+  TextInput,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import YoutubeIframe from "react-native-youtube-iframe";
+import YoutubeIframe, { YoutubeIframeRef } from "react-native-youtube-iframe";
 import { Colors, Spacing } from "@/src/constants/theme";
 
 import { fetchCourseByID } from "@/src/api/modules/courseApi";
@@ -20,8 +25,12 @@ import {
   getUserProgress,
   markLectureComplete,
   rateCourse,
+  syncProgress,
 } from "@/src/api/modules/userApi";
+// --- [NEW] Import API AI ---
+import { getDailyAiReport, AiReportData } from "@/src/api/modules/aiApi";
 
+// --- Interfaces ---
 interface Lecture {
   lectureId: string;
   title: string;
@@ -54,22 +63,39 @@ export default function LessonScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
+  // --- State Data ---
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [completedLectureIds, setCompletedLectureIds] = useState<Set<string>>(
     new Set(),
   );
+
+  // --- [NEW] State cho AI Insight ---
+  const [aiInsight, setAiInsight] = useState<AiReportData | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
 
+  // --- State Modal Đánh giá ---
+  const [modalVisible, setModalVisible] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
+
+  const playerRef = useRef<YoutubeIframeRef>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // --- Fetch Data ---
   useEffect(() => {
     const fetchData = async () => {
       try {
         if (!id) return;
 
-        const [courseRes, progressRes] = await Promise.all([
+        // Gọi song song: Course Info, Progress và [NEW] AI Report
+        const [courseRes, progressRes, aiRes] = await Promise.all([
           fetchCourseByID(id as string),
           getUserProgress(id as string),
+          getDailyAiReport(), // Lấy báo cáo AI
         ]);
 
         if (courseRes.success) {
@@ -91,6 +117,11 @@ export default function LessonScreen() {
             );
           setCompletedLectureIds(new Set(completedList));
         }
+
+        // [NEW] Set data AI
+        if (aiRes.success) {
+          setAiInsight(aiRes.data);
+        }
       } catch (error) {
         console.error("Error loading lesson:", error);
         Alert.alert("Lỗi", "Không thể tải nội dung khóa học.");
@@ -102,6 +133,44 @@ export default function LessonScreen() {
     fetchData();
   }, [id]);
 
+  // --- Tracking Logic ---
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (isPlaying && selectedLecture && id) {
+      interval = setInterval(async () => {
+        if (playerRef.current) {
+          try {
+            const currentTime = await playerRef.current.getCurrentTime();
+            const duration = await playerRef.current.getDuration();
+
+            if (duration > 0) {
+              const res = await syncProgress(
+                selectedLecture.lectureId,
+                id as string,
+                Math.floor(currentTime),
+                Math.floor(duration),
+              );
+
+              if (res?.success && res.data.isCompleted) {
+                if (!completedLectureIds.has(selectedLecture.lectureId)) {
+                  setCompletedLectureIds((prev) =>
+                    new Set(prev).add(selectedLecture.lectureId),
+                  );
+                }
+              }
+            }
+          } catch (err) {
+            console.log("Tracking error:", err);
+          }
+        }
+      }, 10000);
+    }
+
+    return () => clearInterval(interval);
+  }, [isPlaying, selectedLecture, id, completedLectureIds]);
+
+  // --- Handlers ---
   const handleMarkComplete = async () => {
     if (!selectedLecture) return;
     if (completedLectureIds.has(selectedLecture.lectureId)) return;
@@ -109,7 +178,6 @@ export default function LessonScreen() {
     setMarking(true);
     try {
       const res = await markLectureComplete(selectedLecture.lectureId);
-
       if (res.success) {
         setCompletedLectureIds((prev) =>
           new Set(prev).add(selectedLecture.lectureId),
@@ -123,28 +191,31 @@ export default function LessonScreen() {
     }
   };
 
-  const handleRateCourse = () => {
-    Alert.alert(
-      "Đánh giá khóa học",
-      "Bạn muốn đánh giá khóa học này mấy sao?",
-      [
-        { text: "Hủy", style: "cancel" },
-        { text: "5 Sao ⭐️", onPress: () => submitRating(5) },
-      ],
-    );
+  const openRatingModal = () => {
+    setRating(5);
+    setComment("");
+    setModalVisible(true);
   };
 
-  const submitRating = async (rating: number) => {
+  const submitRating = async () => {
+    if (!id) return;
+    setSubmittingRating(true);
+    Keyboard.dismiss();
+
     try {
-      if (id) {
-        await rateCourse(id as string, rating, "Đánh giá từ app");
-        Alert.alert("Cảm ơn", `Bạn đã đánh giá ${rating} sao!`);
-      }
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể gửi đánh giá lúc này.");
+      await rateCourse(id as string, rating, comment);
+      Alert.alert("Thành công", "Cảm ơn bạn đã đánh giá khóa học!");
+      setModalVisible(false);
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Không thể gửi đánh giá lúc này.";
+      Alert.alert("Gửi thất bại", errorMessage);
+    } finally {
+      setSubmittingRating(false);
     }
   };
 
+  // --- Render ---
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
@@ -166,13 +237,19 @@ export default function LessonScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Video Player Area */}
+      {/* Video Player */}
       <View style={styles.videoWrapper}>
         {selectedLecture && getYoutubeVideoId(selectedLecture.videoUrl) ? (
           <YoutubeIframe
+            ref={playerRef}
             height={230}
             play={true}
             videoId={getYoutubeVideoId(selectedLecture.videoUrl)!}
+            onChangeState={(state: string) => {
+              if (state === "playing") setIsPlaying(true);
+              else if (state === "paused" || state === "ended")
+                setIsPlaying(false);
+            }}
           />
         ) : (
           <View style={styles.videoPlaceholder}>
@@ -181,7 +258,6 @@ export default function LessonScreen() {
             </Text>
           </View>
         )}
-
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
@@ -190,15 +266,13 @@ export default function LessonScreen() {
       <ScrollView style={styles.content}>
         <Text style={styles.courseTitle}>{course.title}</Text>
 
-        {/* Controls Area */}
+        {/* Controls: Hoàn thành & Đánh giá */}
         {selectedLecture && (
           <View style={styles.controlsContainer}>
             <Text style={styles.lectureTitle}>
               Đang học: {selectedLecture.title}
             </Text>
-
             <View style={styles.buttonRow}>
-              {/* Nút Hoàn thành */}
               <TouchableOpacity
                 style={[
                   styles.actionBtn,
@@ -229,10 +303,9 @@ export default function LessonScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {/* Nút Đánh giá */}
               <TouchableOpacity
                 style={[styles.actionBtn, styles.outlineBtn]}
-                onPress={handleRateCourse}
+                onPress={openRatingModal}
               >
                 <Ionicons
                   name="star-outline"
@@ -249,19 +322,42 @@ export default function LessonScreen() {
           </View>
         )}
 
-        <View style={styles.divider} />
+        {/* --- [NEW] WIDGET AI PHÂN TÍCH (Thay thế phần Thành tích cũ) --- */}
+        {aiInsight && (
+          <View style={styles.aiWidgetContainer}>
+            <View style={styles.aiHeader}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Ionicons name="sparkles" size={20} color="#9C27B0" />
+                <Text style={styles.aiTitle}>Trợ lý AI phân tích</Text>
+              </View>
+              <View style={styles.aiScoreBadge}>
+                <Text style={styles.aiScoreText}>{aiInsight.score}/10</Text>
+              </View>
+            </View>
 
-        {/* Danh sách bài học */}
+            <Text style={styles.aiMessage}>"{aiInsight.dailyMessage}"</Text>
+
+            {aiInsight.actionItem && (
+              <View style={styles.aiActionBox}>
+                <Ionicons name="bulb-outline" size={16} color="#0277BD" />
+                <Text style={styles.aiActionText}>{aiInsight.actionItem}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        <View style={styles.divider} />
         <Text style={styles.playlistTitle}>Nội dung khóa học</Text>
 
+        {/* Course Content List */}
         {course.chapters?.map((chapter) => (
           <View key={chapter.chapterId} style={styles.chapterContainer}>
             <Text style={styles.chapterTitle}>{chapter.title}</Text>
-
             {chapter.lectures?.map((lecture) => {
               const isActive = selectedLecture?.lectureId === lecture.lectureId;
               const isCompleted = completedLectureIds.has(lecture.lectureId);
-
               return (
                 <TouchableOpacity
                   key={lecture.lectureId}
@@ -309,6 +405,69 @@ export default function LessonScreen() {
           </View>
         ))}
       </ScrollView>
+
+      {/* --- Modal Đánh Giá --- */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={styles.modalContainer}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Đánh giá khóa học</Text>
+                <View style={styles.starContainer}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity
+                      key={star}
+                      onPress={() => setRating(star)}
+                      style={{ padding: 5 }}
+                    >
+                      <Ionicons
+                        name={star <= rating ? "star" : "star-outline"}
+                        size={32}
+                        color="#FFD700"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Viết cảm nhận..."
+                  multiline
+                  numberOfLines={4}
+                  value={comment}
+                  onChangeText={setComment}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.cancelBtn]}
+                    onPress={() => setModalVisible(false)}
+                  >
+                    <Text style={styles.cancelBtnText}>Hủy</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.submitBtn]}
+                    onPress={submitRating}
+                    disabled={submittingRating}
+                  >
+                    {submittingRating ? (
+                      <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                      <Text style={styles.submitBtnText}>Gửi</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -400,5 +559,134 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     zIndex: 10,
+  },
+
+  // --- AI Widget Styles ---
+  aiWidgetContainer: {
+    backgroundColor: "#F3E5F5", // Tím nhạt
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E1BEE7",
+  },
+  aiHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  aiTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#7B1FA2", // Tím đậm
+  },
+  aiScoreBadge: {
+    backgroundColor: "#9C27B0",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  aiScoreText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  aiMessage: {
+    fontSize: 14,
+    color: "#4A148C",
+    fontStyle: "italic",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  aiActionBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFFFFF",
+    padding: 8,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  aiActionText: {
+    fontSize: 13,
+    color: "#0277BD",
+    fontWeight: "600",
+  },
+
+  // --- Modal Styles ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    width: "90%",
+    justifyContent: "center",
+  },
+  modalContent: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#333",
+  },
+  starContainer: {
+    flexDirection: "row",
+    marginBottom: 10,
+  },
+  ratingText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.common.primary,
+    marginBottom: 15,
+  },
+  commentInput: {
+    width: "100%",
+    height: 100,
+    borderColor: "#DDD",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    textAlignVertical: "top",
+    marginBottom: 20,
+    fontSize: 14,
+    color: "#333",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelBtn: {
+    backgroundColor: "#F2F2F2",
+  },
+  cancelBtnText: {
+    color: "#666",
+    fontWeight: "600",
+  },
+  submitBtn: {
+    backgroundColor: Colors.common.primary,
+  },
+  submitBtnText: {
+    color: "#FFF",
+    fontWeight: "600",
   },
 });

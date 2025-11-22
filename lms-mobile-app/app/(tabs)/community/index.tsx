@@ -1,66 +1,91 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import PostCard from '../../../src/components/specific/PostCard';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import PostCard from "../../../src/components/specific/PostCard";
+import { Colors } from "@/src/constants/theme";
 
-interface Comment {
-  id: string;
-  author: string;
-  content: string;
-  likes: number;
-  dislikes: number;
-}
-
-interface Post {
-  id: string;
-  title: string;
-  excerpt: string;
-  likes: number;
-  dislikes: number;
-  comments: Comment[];
-}
-
-// Sample data used to populate the community feed. In a real application
-// this would be replaced with data fetched from an API or stored in Redux.
-const initialPosts: Post[] = [
-  {
-    id: '1',
-    title: 'Welcome to the community!',
-    excerpt: 'Introduce yourself and meet other learners.',
-    likes: 5,
-    dislikes: 0,
-    comments: [],
-  },
-  {
-    id: '2',
-    title: 'React Native tips & tricks',
-    excerpt: 'Share your favourite tips for building apps with React Native.',
-    likes: 3,
-    dislikes: 1,
-    comments: [],
-  },
-];
+// API
+import {
+  getPosts,
+  toggleLikePost,
+  PostItem,
+} from "@/src/api/modules/socialApi";
 
 export default function CommunityScreen() {
   const router = useRouter();
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [posts, setPosts] = useState<PostItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleLike = (id: string) => {
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === id ? { ...post, likes: post.likes + 1 } : post
-      )
-    );
+  // Fetch Data
+  const fetchPostsData = async () => {
+    try {
+      const res = await getPosts();
+      if (res.success) {
+        setPosts(res.data);
+      }
+    } catch (error) {
+      console.log("Error fetching posts", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  const handleDislike = (id: string) => {
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === id ? { ...post, dislikes: post.dislikes + 1 } : post
-      )
-    );
+  useEffect(() => {
+    fetchPostsData();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchPostsData();
   };
+
+  // Handle Like
+  const handleLike = async (postId: string) => {
+    // Optimistic Update
+    setPosts((prev) =>
+      prev.map((post) => {
+        if (post.postId === postId) {
+          const newLiked = !post.isLiked;
+          return {
+            ...post,
+            isLiked: newLiked,
+            likeCount: post.likeCount + (newLiked ? 1 : -1),
+          };
+        }
+        return post;
+      }),
+    );
+
+    try {
+      await toggleLikePost(postId);
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể like bài viết này");
+      // Revert if error (Optional)
+    }
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color={Colors.common.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -68,22 +93,34 @@ export default function CommunityScreen() {
         data={posts}
         renderItem={({ item }) => (
           <PostCard
-            title={item.title}
-            excerpt={item.excerpt}
-            likes={item.likes}
-            dislikes={item.dislikes}
-            commentsCount={item.comments.length}
-            onPress={() => router.push(`/community/${item.id}`)}
-            onLike={() => handleLike(item.id)}
-            onDislike={() => handleDislike(item.id)}
+            title={item.author?.fullName || "Người dùng ẩn danh"} 
+            excerpt={item.content}
+            likes={item.likeCount}
+            dislikes={0} 
+            commentsCount={item.commentCount}
+            onPress={() =>
+              router.push({
+                pathname: "/community/[id]",
+                params: { id: item.postId },
+              })
+            }
+            onLike={() => handleLike(item.postId)}
+            onDislike={() => {}} 
+            isLiked={item.isLiked} 
+            avatarUrl={item.author?.avatarUrl}
+            timestamp={item.createdAt}
           />
         )}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.postId}
         contentContainerStyle={{ padding: 16 }}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        ListEmptyComponent={<ActivityIndicator size="small" color="#999" />}
       />
+
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/community/create-post')}
+        onPress={() => router.push("/community/create-post")}
       >
         <Ionicons name="add" size={24} color="#ffffff" />
       </TouchableOpacity>
@@ -92,17 +129,21 @@ export default function CommunityScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, backgroundColor: "#f0f2f5" },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     right: 20,
     height: 50,
     width: 50,
     borderRadius: 25,
-    backgroundColor: '#003096',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Colors.common.primary,
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
   },
 });

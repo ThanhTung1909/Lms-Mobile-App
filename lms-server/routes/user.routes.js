@@ -3,6 +3,7 @@ import {
   getEnrolledCourses,
   getUserProgress,
   markLectureComplete,
+  syncProgress,
 } from "../controllers/user.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
 
@@ -13,5 +14,6 @@ const router = express.Router();
 router.get("/enrolled-courses", verifyToken, getEnrolledCourses);
 router.get("/progress", verifyToken, getUserProgress);
 router.post("/progress/:lectureId", verifyToken, markLectureComplete);
+router.post("/progress/sync", verifyToken, syncProgress);
 
 export default router;

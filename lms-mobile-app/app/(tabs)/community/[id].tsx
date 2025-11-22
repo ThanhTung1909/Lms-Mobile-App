@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,207 +6,272 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
-import CommentItem from '../../../src/components/specific/CommentItem';
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import CommentItem from "../../../src/components/specific/CommentItem";
+import { Colors } from "@/src/constants/theme";
+import {
+  getPostDetail,
+  createComment,
+  toggleLikePost,
+} from "@/src/api/modules/socialApi";
 
-/**
- * Discussion detail screen. Displays the content of a single post and its
- * comments. Users can like/dislike the post and individual comments as well
- * as add new comments. All data here is local to demonstrate the UI – in a
- * real app you would fetch the post and comments from your backend.
- */
+// Định nghĩa lại Type khớp với Backend
 interface CommentType {
-  id: string;
-  author: string;
+  commentId: string;
   content: string;
-  likes: number;
-  dislikes: number;
+  user: { fullName: string; avatarUrl?: string };
+  createdAt: string;
 }
 
 interface PostType {
-  id: string;
-  title: string;
+  postId: string;
   content: string;
-  likes: number;
-  dislikes: number;
+  author: { fullName: string; avatarUrl?: string };
+  likeCount: number;
+  commentCount: number;
+  isLiked: boolean;
   comments: CommentType[];
+  createdAt: string;
 }
 
 export default function DiscussionScreen() {
   const { discussionId } = useLocalSearchParams<{ discussionId: string }>();
-  // Initialise with fake data for demonstration
-  const [post, setPost] = useState<PostType>({
-    id: discussionId || '0',
-    title: 'Sample discussion',
-    content:
-      'This is a sample discussion post. It can contain multiple paragraphs of text and rich formatting when loaded from the server.',
-    likes: 2,
-    dislikes: 0,
-    comments: [
-      {
-        id: 'c1',
-        author: 'Alice',
-        content: 'Thanks for sharing!',
-        likes: 1,
-        dislikes: 0,
-      },
-      {
-        id: 'c2',
-        author: 'Bob',
-        content: 'Great insight, I have a question...',
-        likes: 0,
-        dislikes: 0,
-      },
-    ],
-  });
-  const [newComment, setNewComment] = useState('');
 
-  const likePost = () => {
-    setPost((prev) => ({ ...prev, likes: prev.likes + 1 }));
+  const [post, setPost] = useState<PostType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [newComment, setNewComment] = useState("");
+  const [sending, setSending] = useState(false);
+
+  // Fetch Post Detail
+  const fetchDetail = async () => {
+    try {
+      if (!discussionId) return;
+      // Giả sử API getPostDetail trả về cấu trúc PostType
+      // Nếu API backend chưa làm hàm getById, bạn có thể phải tự sửa backend trước
+      // Hoặc tạm thời dùng getPosts() lọc ra (không khuyến khích)
+      const res = await getPostDetail(discussionId);
+      if (res.success) {
+        setPost(res.data);
+      }
+    } catch (error) {
+      console.log("Error loading discussion");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const dislikePost = () => {
-    setPost((prev) => ({ ...prev, dislikes: prev.dislikes + 1 }));
+  useEffect(() => {
+    fetchDetail();
+  }, [discussionId]);
+
+  // Handle Actions
+  const handleLikePost = async () => {
+    if (!post) return;
+    const oldLiked = post.isLiked;
+
+    // UI Optimistic
+    setPost((prev) =>
+      prev
+        ? {
+            ...prev,
+            isLiked: !oldLiked,
+            likeCount: prev.likeCount + (!oldLiked ? 1 : -1),
+          }
+        : null,
+    );
+
+    try {
+      await toggleLikePost(post.postId);
+    } catch (error) {
+      // Revert
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              isLiked: oldLiked,
+              likeCount: prev.likeCount + (oldLiked ? 1 : -1),
+            }
+          : null,
+      );
+    }
   };
 
-  const handleCommentLike = (commentId: string) => {
-    setPost((prev) => ({
-      ...prev,
-      comments: prev.comments.map((c) =>
-        c.id === commentId ? { ...c, likes: c.likes + 1 } : c
-      ),
-    }));
+  const handleSendComment = async () => {
+    if (!newComment.trim() || !post) return;
+    setSending(true);
+    try {
+      await createComment(post.postId, newComment);
+      setNewComment("");
+      fetchDetail(); // Reload lại để hiện comment mới (hoặc append vào list bằng tay)
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể gửi bình luận");
+    } finally {
+      setSending(false);
+    }
   };
 
-  const handleCommentDislike = (commentId: string) => {
-    setPost((prev) => ({
-      ...prev,
-      comments: prev.comments.map((c) =>
-        c.id === commentId ? { ...c, dislikes: c.dislikes + 1 } : c
-      ),
-    }));
-  };
-
-  const addComment = () => {
-    const text = newComment.trim();
-    if (!text) return;
-    const newId = Date.now().toString();
-    setPost((prev) => ({
-      ...prev,
-      comments: [
-        ...prev.comments,
-        { id: newId, author: 'You', content: text, likes: 0, dislikes: 0 },
-      ],
-    }));
-    setNewComment('');
-  };
+  if (loading)
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.common.primary} />
+      </View>
+    );
+  if (!post)
+    return (
+      <View style={styles.center}>
+        <Text>Không tìm thấy bài viết</Text>
+      </View>
+    );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    >
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-        <Text style={styles.title}>{post.title}</Text>
-        <Text style={styles.content}>{post.content}</Text>
-        <View style={styles.postActions}>
-          <TouchableOpacity style={styles.postAction} onPress={likePost}>
-            <Ionicons name="thumbs-up-outline" size={22} color="#003096" />
-            <Text style={styles.postActionText}>{post.likes}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.postAction} onPress={dislikePost}>
-            <Ionicons name="thumbs-down-outline" size={22} color="#003096" />
-            <Text style={styles.postActionText}>{post.dislikes}</Text>
-          </TouchableOpacity>
+        {/* Header Post */}
+        <View style={styles.headerRow}>
+          <Text style={styles.author}>{post.author?.fullName}</Text>
+          <Text style={styles.date}>
+            {new Date(post.createdAt).toLocaleDateString()}
+          </Text>
         </View>
-        <Text style={styles.commentsHeader}>Comments</Text>
-        {post.comments.map((comment) => (
+
+        {/* Content (Render HTML nếu dùng RichEditor, hoặc Text thường) */}
+        <Text style={styles.content}>{post.content}</Text>
+
+        {/* Actions */}
+        <View style={styles.postActions}>
+          <TouchableOpacity style={styles.postAction} onPress={handleLikePost}>
+            <Ionicons
+              name={post.isLiked ? "heart" : "heart-outline"}
+              size={22}
+              color={post.isLiked ? "#E91E63" : "#003096"}
+            />
+            <Text
+              style={[
+                styles.postActionText,
+                post.isLiked && { color: "#E91E63" },
+              ]}
+            >
+              {post.likeCount} Thích
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.postAction}>
+            <Ionicons name="chatbubble-outline" size={22} color="#003096" />
+            <Text style={styles.postActionText}>
+              {post.comments?.length || 0} Bình luận
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.commentsHeader}>Bình luận</Text>
+
+        {/* Comments List */}
+        {post.comments?.map((comment) => (
           <CommentItem
-            key={comment.id}
-            author={comment.author}
+            key={comment.commentId}
+            author={comment.user?.fullName}
             content={comment.content}
-            likes={comment.likes}
-            dislikes={comment.dislikes}
-            onLike={() => handleCommentLike(comment.id)}
-            onDislike={() => handleCommentDislike(comment.id)}
+            likes={0} // Comment like chưa implement
+            dislikes={0}
+            onLike={() => {}}
+            onDislike={() => {}}
+            // avatarUrl={comment.user?.avatarUrl} // Cần update CommentItem
           />
         ))}
       </ScrollView>
+
+      {/* Input Box */}
       <View style={styles.addCommentContainer}>
         <TextInput
           value={newComment}
           onChangeText={setNewComment}
-          placeholder="Add a comment..."
+          placeholder="Viết bình luận..."
           style={styles.commentInput}
-          placeholderTextColor="#888888"
+          placeholderTextColor="#888"
+          multiline
         />
-        <TouchableOpacity style={styles.sendButton} onPress={addComment}>
-          <Ionicons name="send" size={20} color="#ffffff" />
+        <TouchableOpacity
+          style={styles.sendButton}
+          onPress={handleSendComment}
+          disabled={sending}
+        >
+          {sending ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Ionicons name="send" size={20} color="#ffffff" />
+          )}
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
+  container: { flex: 1, backgroundColor: "#ffffff" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    alignItems: "center",
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#003096',
-    marginBottom: 8,
-  },
-  content: {
-    color: '#333333',
-    marginBottom: 12,
-  },
+  author: { fontSize: 16, fontWeight: "700", color: Colors.common.primary },
+  date: { fontSize: 12, color: "#888" },
+  content: { color: "#333333", marginBottom: 20, fontSize: 16, lineHeight: 24 },
   postActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#EEE",
+    paddingVertical: 10,
   },
-  postAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  postActionText: {
-    marginLeft: 4,
-    color: '#003096',
-    fontWeight: '600',
-  },
+  postAction: { flexDirection: "row", alignItems: "center", marginRight: 20 },
+  postActionText: { marginLeft: 4, color: "#003096", fontWeight: "600" },
   commentsHeader: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#003096',
-    marginBottom: 8,
+    fontWeight: "600",
+    color: "#003096",
+    marginBottom: 15,
   },
   addCommentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#C6C6C6',
-    backgroundColor: '#ffffff',
+    borderTopColor: "#C6C6C6",
+    backgroundColor: "#f9f9f9",
   },
   commentInput: {
     flex: 1,
-    borderColor: '#C6C6C6',
+    borderColor: "#DDD",
     borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 10,
+    borderRadius: 20,
+    paddingHorizontal: 15,
     paddingVertical: 8,
-    color: '#003096',
+    color: "#333",
     marginRight: 8,
+    backgroundColor: "#FFF",
+    maxHeight: 80,
   },
   sendButton: {
-    backgroundColor: '#003096',
+    backgroundColor: Colors.common.primary,
     padding: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    width: 44,
+    height: 44,
   },
 });

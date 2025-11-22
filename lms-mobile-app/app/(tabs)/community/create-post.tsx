@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from "react";
 import {
   View,
   TextInput,
@@ -6,106 +6,115 @@ import {
   TouchableOpacity,
   Text,
   Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
+  ActivityIndicator,
+} from "react-native";
+import { useRouter } from "expo-router";
+import {
+  RichEditor,
+  RichToolbar,
+  actions,
+} from "react-native-pell-rich-editor";
+import { Colors } from "@/src/constants/theme";
+import { createPost } from "@/src/api/modules/socialApi";
 
-/**
- * Screen that lets users compose a new discussion post. A rich text editor is
- * provided via react-native-pell-rich-editor which wraps a web based editor
- * component. See documentation for examples on how to customise the editor
- * behaviour and actions【677848043953150†L255-L263】. The toolbar provides basic
- * formatting options such as bold, italic and lists【677848043953150†L275-L296】.
- */
 export default function CreatePostScreen() {
   const router = useRouter();
   const richText = useRef<RichEditor | null>(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
 
-  const handleSubmit = () => {
-    // Simple validation before submitting
-    if (!title.trim() || !content.trim()) {
-      Alert.alert('Validation', 'Please enter both title and content.');
+  const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!content.replace(/<[^>]*>?/gm, "").trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập nội dung bài viết.");
       return;
     }
-    // Here you would normally send the post to your API or update global state.
-    // We simply navigate back to the previous screen after submission.
-    router.back();
+
+    setSubmitting(true);
+    try {
+      await createPost(content);
+      Alert.alert("Thành công", "Đăng bài viết thành công!");
+      router.back();
+    } catch (error) {
+      Alert.alert("Thất bại", "Không thể đăng bài viết lúc này.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <TextInput
-        placeholder="Post title"
-        value={title}
-        onChangeText={setTitle}
-        style={styles.titleInput}
-        placeholderTextColor="#888888"
-      />
-      {/* Rich text editor for composing the post content */}
+      {/* Rich text editor */}
       <RichEditor
         ref={richText}
         onChange={setContent}
-        placeholder="Write your post..."
-        // Disable hardware acceleration on Android as recommended by the docs【677848043953150†L255-L263】.
-        androidHardwareAccelerationDisabled={true}
+        placeholder="Bạn đang nghĩ gì thế?..."
+        androidLayerType="software"
         style={styles.richEditor}
-        initialHeight={250}
+        initialHeight={300}
+        editorStyle={{
+          backgroundColor: "#fff",
+          placeholderColor: "#888",
+          contentCSSText: "font-size: 16px; min-height: 200px;",
+        }}
       />
+
       <RichToolbar
         editor={richText}
-        // Choose a subset of actions to keep the toolbar concise
         actions={[
           actions.setBold,
           actions.setItalic,
           actions.insertBulletsList,
           actions.insertOrderedList,
           actions.insertLink,
+          actions.keyboard,
         ]}
-        iconTint="#003096"
-        selectedIconTint="#003096"
+        iconTint={Colors.common.primary}
+        selectedIconTint={Colors.common.primary}
         style={styles.richToolbar}
       />
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Publish</Text>
+
+      <TouchableOpacity
+        style={[styles.submitButton, submitting && { opacity: 0.7 }]}
+        onPress={handleSubmit}
+        disabled={submitting}
+      >
+        {submitting ? (
+          <ActivityIndicator color="#FFF" />
+        ) : (
+          <Text style={styles.submitText}>Đăng bài</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff', padding: 16 },
-  titleInput: {
-    borderColor: '#C6C6C6',
-    borderWidth: 1,
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 12,
-    color: '#003096',
-  },
+  container: { flex: 1, backgroundColor: "#ffffff", padding: 16 },
   richEditor: {
-    borderColor: '#C6C6C6',
+    borderColor: "#C6C6C6",
     borderWidth: 1,
     borderRadius: 6,
-    minHeight: 200,
+    flex: 1,
   },
   richToolbar: {
-    backgroundColor: '#ffffff',
-    borderColor: '#C6C6C6',
+    backgroundColor: "#f5f5f5",
+    borderColor: "#C6C6C6",
     borderWidth: 1,
     borderRadius: 6,
     marginTop: 8,
   },
   submitButton: {
-    backgroundColor: '#003096',
+    backgroundColor: Colors.common.primary,
     paddingVertical: 12,
     borderRadius: 6,
     marginTop: 16,
-    alignItems: 'center',
+    alignItems: "center",
+    marginBottom: 20,
   },
   submitText: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
+    fontSize: 16,
   },
 });

@@ -25,6 +25,18 @@ export default (sequelize) => {
           key: "lecture_id",
         },
       },
+      lastWatchedSecond: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        field: "last_watched_second",
+        comment: "Lưu giây cuối cùng người dùng xem",
+      },
+      isCompleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        field: "is_completed",
+        comment: "Đánh dấu nhanh trạng thái hoàn thành",
+      },
       completedAt: {
         type: DataTypes.DATE,
       },

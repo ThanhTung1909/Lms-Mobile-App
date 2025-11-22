@@ -3,6 +3,7 @@ import cors from "cors";
 import "dotenv/config";
 
 import db from "./models/index.js";
+import connectDB from "./configs/mongoCofig.js";
 import mainRouter from "./routes/index.js";
 import connectCloudinary from "./configs/cloudinary.js";
 import { stripeWebhook } from "./controllers/payment.controller.js";
@@ -32,6 +33,7 @@ app.use("/api/v1", mainRouter);
 connectCloudinary();
 
 const startServer = async () => {
+  const PORT = process.env.DB_PORT;
   try {
     // Test a connection
     await db.sequelize.authenticate();
@@ -44,6 +46,9 @@ const startServer = async () => {
     // Bỏ { force: true } trong môi trường production.
     await db.sequelize.sync({ force: false });
     console.log("All models were synchronized successfully.");
+
+    await connectDB();
+    console.log("MongoDB Connect successfully");
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

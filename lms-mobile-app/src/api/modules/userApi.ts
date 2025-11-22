@@ -48,3 +48,24 @@ export const rateCourse = async (
     throw error;
   }
 };
+
+export const syncProgress = async (
+  lectureId: string,
+  courseId: string,
+  currentSecond: number,
+  totalDuration: number,
+) => {
+  try {
+    const response = await apiClient.post("/users/progress/sync", {
+      lectureId,
+      courseId,
+      currentSecond,
+      totalDuration,
+      deviceInfo: "mobile_app",
+    });
+    return response.data;
+  } catch (error) {
+    console.log("Sync error (silent):", error);
+    return null;
+  }
+};
