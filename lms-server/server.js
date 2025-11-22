@@ -6,8 +6,12 @@ import db from "./models/index.js";
 import mainRouter from "./routes/index.js";
 import connectCloudinary from "./configs/cloudinary.js";
 
+import paymentRoutes from "./routes/payment.routes.js";
+
 // Initialize Express
 const app = express();
+
+app.use("/api/v1/payment", paymentRoutes);
 
 // Middlewares
 app.use(express.json());

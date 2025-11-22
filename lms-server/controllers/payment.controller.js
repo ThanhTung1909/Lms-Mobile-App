@@ -65,29 +65,59 @@ export const stripeWebhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Xử lý event thanh toán thành công
-  if (event.type === "payment_intent.succeeded") {
-    const paymentIntent = event.data.object;
-    const { userId, courseId } = paymentIntent.metadata;
+  const paymentIntent = event.data.object;
+  
+  switch (event.type) {
+    case "payment_intent.succeeded": {
+      const { userId, courseId } = paymentIntent.metadata;
+      console.log(`💰 Payment succeeded for User ${userId}, Course ${courseId}`);
 
-    try {
-      // Cập nhật trạng thái payment
-      await db.Payment.update(
-        { status: "succeeded" },
-        { where: { stripePaymentId: paymentIntent.id } }
-      );
+      try {
+        await db.Payment.update(
+          { status: "succeeded" },
+          { where: { stripePaymentId: paymentIntent.id } }
+        );
+        const existingEnrollment = await db.Enrollment.findOne({
+            where: { userId, courseId }
+        });
 
-      // Ghi nhận enrollment
-      await db.Enrollment.create({
-        userId,
-        courseId,
-        status: "active",
-      });
-
-      console.log(`User ${userId} đã mua khoá học ${courseId}`);
-    } catch (err) {
-      console.error("Lỗi khi xử lý webhook:", err);
+        if (!existingEnrollment) {
+            await db.Enrollment.create({
+              userId,
+              courseId,
+              status: "active",
+            });
+            console.log("✅ Enrollment created successfully.");
+        }
+      } catch (err) {
+        console.error("❌ Error updating DB on success:", err);
+      }
+      break;
     }
+
+    case "payment_intent.payment_failed": {
+      const { userId, courseId } = paymentIntent.metadata;
+      const errorMessage = paymentIntent.last_payment_error?.message || "Unknown error";
+      
+      console.log(`❌ Payment failed for User ${userId}: ${errorMessage}`);
+
+      try {
+
+        await db.Payment.update(
+          { 
+            status: "failed",
+
+          },
+          { where: { stripePaymentId: paymentIntent.id } }
+        );
+      } catch (err) {
+        console.error("❌ Error updating DB on failure:", err);
+      }
+      break;
+    }
+
+    default:
+      console.log(`Unhandled event type ${event.type}`);
   }
 
   res.json({ received: true });
