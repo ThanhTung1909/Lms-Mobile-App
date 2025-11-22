@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
-import { userApi } from "@/src/api/modules/userApi";
+import { getEnrolledCourses } from "@/src/api/modules/userApi";
+
 
 interface Creator {
   userId: string;
@@ -90,7 +91,7 @@ export default function MyLearningScreen() {
 
   const fetchEnrolledCourses = async () => {
     try {
-      const response = await userApi.getEnrolledCourses();
+      const response = await getEnrolledCourses();
 
       const apiResponse = response as ApiEnrollmentResponse;
 
