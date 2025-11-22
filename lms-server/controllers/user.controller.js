@@ -120,7 +120,7 @@ export const getEnrolledCourses = async (req, res) => {
 // GET /progress
 export const getUserProgress = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id;
         const { courseId } = req.query;
 
         const whereConditions = { userId };
@@ -217,7 +217,7 @@ export const getUserProgress = async (req, res) => {
 // POST /progress/:lectureId
 export const markLectureComplete = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id;
         const { lectureId } = req.params;
 
         const lecture = await Lecture.findByPk(lectureId, {
