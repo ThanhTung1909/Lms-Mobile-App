@@ -25,7 +25,7 @@ interface RegisterResponse {
     id: string;
     fullName: string;
     email: string;
-    roles: { roleId: string; name: string }[]; 
+    roles: { roleId: string; name: string }[];
   };
 }
 

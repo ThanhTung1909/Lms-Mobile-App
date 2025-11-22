@@ -37,6 +37,18 @@ export const getAllCourses = async (req, res) => {
             },
           ],
         },
+        {
+          model: db.CourseRating,
+          as: "ratings",
+          attributes: ["ratingId", "rating", "comment", "createdAt"],
+          include: [
+            {
+              model: db.User,
+              as: "user",
+              attributes: ["userId", "fullName", "avatarUrl"],
+            },
+          ],
+        },
       ],
       order: [
         ["createdAt", "DESC"],
