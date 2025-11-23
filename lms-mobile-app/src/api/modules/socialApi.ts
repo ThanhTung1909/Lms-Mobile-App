@@ -1,21 +1,47 @@
 import apiClient from "../apiClient";
 
+
 export interface PostItem {
-  postId: string;
+  _id: string;
   userId: string;
   content: string;
-  imageUrl?: string;
+  imageUrls: string[];
+  likesCount: number;
+  commentsCount: number;
   createdAt: string;
-  likeCount: number;
-  commentCount: number;
   isLiked: boolean;
-  author: {
+  user?: {
+    userId: string;
     fullName: string;
-    avatarUrl?: string;
+    avatarUrl: string | null;
+  };
+  author?: {
+    fullName: string;
+    avatarUrl: string | null;
   };
 }
 
-// Lấy danh sách bài viết
+
+export interface CommentItem {
+  _id: string;
+  content: string;
+  userId: string;
+  createdAt: string;
+  user: {
+    userId: string;
+    fullName: string;
+    avatarUrl: string | null;
+  };
+}
+
+
+export interface PostDetail extends PostItem {
+  comments: CommentItem[];
+  likeCount: number;
+}
+
+
+
 export const getPosts = async (page = 1, limit = 10) => {
   try {
     const response = await apiClient.get(
@@ -27,7 +53,6 @@ export const getPosts = async (page = 1, limit = 10) => {
   }
 };
 
-// Đăng bài mới
 export const createPost = async (content: string, imageUrl?: string) => {
   try {
     const response = await apiClient.post("/community/posts", {
@@ -40,7 +65,6 @@ export const createPost = async (content: string, imageUrl?: string) => {
   }
 };
 
-// Like/Unlike bài viết
 export const toggleLikePost = async (postId: string) => {
   try {
     const response = await apiClient.post(`/community/posts/${postId}/like`);
@@ -50,7 +74,6 @@ export const toggleLikePost = async (postId: string) => {
   }
 };
 
-// Bình luận bài viết
 export const createComment = async (postId: string, content: string) => {
   try {
     const response = await apiClient.post(

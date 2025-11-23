@@ -19,45 +19,27 @@ import {
   getPostDetail,
   createComment,
   toggleLikePost,
+  PostDetail, 
 } from "@/src/api/modules/socialApi";
 
-// Định nghĩa lại Type khớp với Backend
-interface CommentType {
-  commentId: string;
-  content: string;
-  user: { fullName: string; avatarUrl?: string };
-  createdAt: string;
-}
-
-interface PostType {
-  postId: string;
-  content: string;
-  author: { fullName: string; avatarUrl?: string };
-  likeCount: number;
-  commentCount: number;
-  isLiked: boolean;
-  comments: CommentType[];
-  createdAt: string;
-}
-
 export default function DiscussionScreen() {
-  const { discussionId } = useLocalSearchParams<{ discussionId: string }>();
 
-  const [post, setPost] = useState<PostType | null>(null);
+  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Fetch Post Detail
   const fetchDetail = async () => {
     try {
-      if (!discussionId) return;
-      const res = await getPostDetail(discussionId);
+      if (!id) return;
+      const res = await getPostDetail(id);
       if (res.success) {
         setPost(res.data);
       }
     } catch (error) {
-      console.log("Error loading discussion");
+      console.log("Error loading discussion", error);
     } finally {
       setLoading(false);
     }
@@ -65,34 +47,34 @@ export default function DiscussionScreen() {
 
   useEffect(() => {
     fetchDetail();
-  }, [discussionId]);
+  }, [id]);
 
-  
   const handleLikePost = async () => {
     if (!post) return;
     const oldLiked = post.isLiked;
 
-    
     setPost((prev) =>
       prev
         ? {
             ...prev,
             isLiked: !oldLiked,
-            likeCount: prev.likeCount + (!oldLiked ? 1 : -1),
+
+            likeCount: (prev.likeCount || 0) + (!oldLiked ? 1 : -1),
           }
         : null,
     );
 
     try {
-      await toggleLikePost(post.postId);
+     
+      await toggleLikePost(post._id);
     } catch (error) {
-      
+     
       setPost((prev) =>
         prev
           ? {
               ...prev,
               isLiked: oldLiked,
-              likeCount: prev.likeCount + (oldLiked ? 1 : -1),
+              likeCount: (prev.likeCount || 0) + (oldLiked ? 1 : -1),
             }
           : null,
       );
@@ -103,11 +85,14 @@ export default function DiscussionScreen() {
     if (!newComment.trim() || !post) return;
     setSending(true);
     try {
-      await createComment(post.postId, newComment);
+      
+      await createComment(post._id, newComment);
       setNewComment("");
       fetchDetail(); 
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể gửi bình luận");
+    } catch (error: any) {
+      
+      const msg = error.response?.data?.message || "Không thể gửi bình luận";
+      Alert.alert("Lỗi", msg);
     } finally {
       setSending(false);
     }
@@ -135,13 +120,14 @@ export default function DiscussionScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
         {/* Header Post */}
         <View style={styles.headerRow}>
-          <Text style={styles.author}>{post.author?.fullName}</Text>
+          <Text style={styles.author}>
+            {post.author?.fullName || post.user?.fullName || "Người dùng"}
+          </Text>
           <Text style={styles.date}>
-            {new Date(post.createdAt).toLocaleDateString()}
+            {new Date(post.createdAt).toLocaleDateString("vi-VN")}
           </Text>
         </View>
 
-      
         <Text style={styles.content}>{post.content}</Text>
 
         {/* Actions */}
@@ -158,7 +144,7 @@ export default function DiscussionScreen() {
                 post.isLiked && { color: "#E91E63" },
               ]}
             >
-              {post.likeCount} Thích
+              {post.likeCount || 0} Thích
             </Text>
           </TouchableOpacity>
           <View style={styles.postAction}>
@@ -171,22 +157,34 @@ export default function DiscussionScreen() {
 
         <Text style={styles.commentsHeader}>Bình luận</Text>
 
-        {/* Comments List */}
-        {post.comments?.map((comment) => (
-          <CommentItem
-            key={comment.commentId}
-            author={comment.user?.fullName}
-            content={comment.content}
-            likes={0} 
-            dislikes={0}
-            onLike={() => {}}
-            onDislike={() => {}}
-            // avatarUrl={comment.user?.avatarUrl} 
-          />
-        ))}
+        
+        {post.comments?.length > 0 ? (
+          post.comments.map((comment) => (
+            <CommentItem
+              
+              key={comment._id}
+              author={comment.user?.fullName || "Ẩn danh"}
+              content={comment.content}
+              likes={0}
+              dislikes={0}
+              onLike={() => {}}
+              onDislike={() => {}}
+              
+              avatarUrl={comment.user?.avatarUrl || undefined}
+              timestamp={comment.createdAt} 
+            />
+          ))
+        ) : (
+          <Text style={{ color: "#888", fontStyle: "italic" }}>
+            Chưa có bình luận nào. Hãy là người đầu tiên!
+          </Text>
+        )}
+
+        
+        <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Input Box */}
+    
       <View style={styles.addCommentContainer}>
         <TextInput
           value={newComment}
@@ -223,7 +221,12 @@ const styles = StyleSheet.create({
   },
   author: { fontSize: 16, fontWeight: "700", color: Colors.common.primary },
   date: { fontSize: 12, color: "#888" },
-  content: { color: "#333333", marginBottom: 20, fontSize: 16, lineHeight: 24 },
+  content: {
+    color: "#333333",
+    marginBottom: 20,
+    fontSize: 16,
+    lineHeight: 24,
+  },
   postActions: {
     flexDirection: "row",
     alignItems: "center",

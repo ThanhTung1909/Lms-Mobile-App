@@ -49,17 +49,19 @@ export default function CommunityScreen() {
     fetchPostsData();
   };
 
-  // Handle Like
+ 
   const handleLike = async (postId: string) => {
-    // Optimistic Update
+    
     setPosts((prev) =>
       prev.map((post) => {
-        if (post.postId === postId) {
+       
+        if (post._id === postId) {
           const newLiked = !post.isLiked;
           return {
             ...post,
             isLiked: newLiked,
-            likeCount: post.likeCount + (newLiked ? 1 : -1),
+           
+            likesCount: post.likesCount + (newLiked ? 1 : -1),
           };
         }
         return post;
@@ -70,7 +72,7 @@ export default function CommunityScreen() {
       await toggleLikePost(postId);
     } catch (error) {
       Alert.alert("Lỗi", "Không thể like bài viết này");
-      // Revert if error (Optional)
+      fetchPostsData(); // Revert lại dữ liệu nếu lỗi
     }
   };
 
@@ -93,25 +95,32 @@ export default function CommunityScreen() {
         data={posts}
         renderItem={({ item }) => (
           <PostCard
-            title={item.author?.fullName || "Người dùng ẩn danh"} 
+            title={
+              item.author?.fullName ||
+              item.user?.fullName ||
+              "Người dùng ẩn danh"
+            }
             excerpt={item.content}
-            likes={item.likeCount}
-            dislikes={0} 
-            commentsCount={item.commentCount}
+            likes={item.likesCount} 
+            dislikes={0}
+            commentsCount={item.commentsCount} 
             onPress={() =>
               router.push({
                 pathname: "/community/[id]",
-                params: { id: item.postId },
+                
+                params: { id: item._id },
               })
             }
-            onLike={() => handleLike(item.postId)}
-            onDislike={() => {}} 
-            isLiked={item.isLiked} 
-            avatarUrl={item.author?.avatarUrl}
+        
+            onLike={() => handleLike(item._id)}
+            onDislike={() => {}}
+            isLiked={item.isLiked}
+            avatarUrl={item.author?.avatarUrl || item.user?.avatarUrl}
             timestamp={item.createdAt}
           />
         )}
-        keyExtractor={(item) => item.postId}
+
+        keyExtractor={(item) => item._id}
         contentContainerStyle={{ padding: 16 }}
         refreshing={refreshing}
         onRefresh={onRefresh}

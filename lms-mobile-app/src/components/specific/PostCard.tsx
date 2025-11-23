@@ -4,16 +4,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/src/constants/theme";
 
 export interface PostCardProps {
- 
   title: string;
   excerpt: string;
   likes: number;
-  dislikes: number; 
+  dislikes: number;
   commentsCount: number;
   onPress?: () => void;
   onLike?: () => void;
   onDislike?: () => void;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   timestamp?: string;
   isLiked?: boolean;
 }
@@ -34,7 +33,6 @@ const PostCard: React.FC<PostCardProps> = ({
   timestamp,
   isLiked = false,
 }) => {
- 
   const dateDisplay = timestamp
     ? new Date(timestamp).toLocaleDateString("vi-VN", {
         day: "numeric",
@@ -46,7 +44,6 @@ const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
-
       <View style={styles.header}>
         <Image
           source={{ uri: avatarUrl || "https://i.pravatar.cc/150?img=3" }}
@@ -142,7 +139,7 @@ const styles = StyleSheet.create({
   },
   actionGroup: {
     flexDirection: "row",
-    gap: 20, 
+    gap: 20,
   },
   action: {
     flexDirection: "row",
