@@ -1,13 +1,31 @@
 import mongoose from "mongoose";
 
+
+let isConnected = false;
+
 const connectDB = async () => {
+
+  if (isConnected) {
+    console.log("=> Using existing MongoDB connection");
+    return;
+  }
+
+  if (mongoose.connection.readyState >= 1) {
+    isConnected = true;
+    return;
+  }
+
   try {
-    mongoose.connection.on("connected", () => {
-      console.log("Database connected");
+    const db = await mongoose.connect(process.env.MONGODB_URL, {
+      dbName: "lms-app",
+      serverSelectionTimeoutMS: 5000,
     });
-    await mongoose.connect(`${process.env.MONGODB_URL}/lms-app`);
+
+    isConnected = db.connections[0].readyState === 1;
+    console.log("=> New MongoDB connection established");
   } catch (error) {
-    console.log(error.message);
+    console.error("Error connecting to MongoDB:", error.message);
+
   }
 };
 
