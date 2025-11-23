@@ -5,7 +5,7 @@ const BASE_URL = "https://lms-server-teal.vercel.app/api/v1";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, // 10s timeout
+  timeout: 10000, 
   headers: {
     "Content-Type": "application/json",
   },

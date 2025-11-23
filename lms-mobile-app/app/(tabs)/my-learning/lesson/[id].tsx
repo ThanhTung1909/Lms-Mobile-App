@@ -232,14 +232,29 @@ export default function LessonScreen() {
       <View style={styles.videoWrapper}>
         {selectedLecture && getYoutubeVideoId(selectedLecture.videoUrl) ? (
           <YoutubeIframe
-            ref={playerRef} 
+            ref={playerRef}
             height={230}
             play={true}
             videoId={getYoutubeVideoId(selectedLecture.videoUrl)!}
             onChangeState={(state: string) => {
               if (state === "playing") setIsPlaying(true);
-              else if (state === "paused" || state === "ended")
+              else if (state === "paused") setIsPlaying(false);
+              else if (state === "ended") {
                 setIsPlaying(false);
+                if (selectedLecture) {
+                  syncProgress(
+                    selectedLecture.lectureId,
+                    id as string,
+                    selectedLecture.duration * 60,
+                    selectedLecture.duration * 60,
+                  ).then((res) => {
+                    if (res?.success)
+                      setCompletedLectureIds((prev) =>
+                        new Set(prev).add(selectedLecture.lectureId),
+                      );
+                  });
+                }
+              }
             }}
           />
         ) : (

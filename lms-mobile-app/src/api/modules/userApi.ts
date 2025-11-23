@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import apiClient from "../apiClient";
 
 // Lấy danh sách khóa học đã đăng ký
@@ -52,16 +53,16 @@ export const rateCourse = async (
 export const syncProgress = async (
   lectureId: string,
   courseId: string,
-  currentSecond: number,
-  totalDuration: number,
+  currentTime: number,
+  duration: number,
 ) => {
   try {
     const response = await apiClient.post("/users/progress/sync", {
       lectureId,
       courseId,
-      currentSecond,
-      totalDuration,
-      deviceInfo: "mobile_app",
+      currentSecond: currentTime,
+      totalDuration: duration,
+      deviceInfo: Platform.OS,
     });
     return response.data;
   } catch (error) {
