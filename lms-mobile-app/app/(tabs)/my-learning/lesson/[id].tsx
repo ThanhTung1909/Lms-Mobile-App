@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
   Modal,
   TextInput,
   Keyboard,
@@ -27,8 +28,6 @@ import {
   rateCourse,
   syncProgress,
 } from "@/src/api/modules/userApi";
-// --- [NEW] Import API AI ---
-import { getDailyAiReport, AiReportData } from "@/src/api/modules/aiApi";
 
 // --- Interfaces ---
 interface Lecture {
@@ -69,10 +68,6 @@ export default function LessonScreen() {
   const [completedLectureIds, setCompletedLectureIds] = useState<Set<string>>(
     new Set(),
   );
-
-  // --- [NEW] State cho AI Insight ---
-  const [aiInsight, setAiInsight] = useState<AiReportData | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
 
@@ -91,11 +86,9 @@ export default function LessonScreen() {
       try {
         if (!id) return;
 
-        // Gọi song song: Course Info, Progress và [NEW] AI Report
-        const [courseRes, progressRes, aiRes] = await Promise.all([
+        const [courseRes, progressRes] = await Promise.all([
           fetchCourseByID(id as string),
           getUserProgress(id as string),
-          getDailyAiReport(), // Lấy báo cáo AI
         ]);
 
         if (courseRes.success) {
@@ -117,11 +110,6 @@ export default function LessonScreen() {
             );
           setCompletedLectureIds(new Set(completedList));
         }
-
-        // [NEW] Set data AI
-        if (aiRes.success) {
-          setAiInsight(aiRes.data);
-        }
       } catch (error) {
         console.error("Error loading lesson:", error);
         Alert.alert("Lỗi", "Không thể tải nội dung khóa học.");
@@ -133,7 +121,6 @@ export default function LessonScreen() {
     fetchData();
   }, [id]);
 
-  // --- Tracking Logic ---
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -171,6 +158,7 @@ export default function LessonScreen() {
   }, [isPlaying, selectedLecture, id, completedLectureIds]);
 
   // --- Handlers ---
+
   const handleMarkComplete = async () => {
     if (!selectedLecture) return;
     if (completedLectureIds.has(selectedLecture.lectureId)) return;
@@ -191,12 +179,14 @@ export default function LessonScreen() {
     }
   };
 
+  // Mở Modal đánh giá
   const openRatingModal = () => {
     setRating(5);
     setComment("");
     setModalVisible(true);
   };
 
+  // Gửi đánh giá lên Server
   const submitRating = async () => {
     if (!id) return;
     setSubmittingRating(true);
@@ -216,6 +206,7 @@ export default function LessonScreen() {
   };
 
   // --- Render ---
+
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
@@ -241,7 +232,7 @@ export default function LessonScreen() {
       <View style={styles.videoWrapper}>
         {selectedLecture && getYoutubeVideoId(selectedLecture.videoUrl) ? (
           <YoutubeIframe
-            ref={playerRef}
+            ref={playerRef} 
             height={230}
             play={true}
             videoId={getYoutubeVideoId(selectedLecture.videoUrl)!}
@@ -266,7 +257,7 @@ export default function LessonScreen() {
       <ScrollView style={styles.content}>
         <Text style={styles.courseTitle}>{course.title}</Text>
 
-        {/* Controls: Hoàn thành & Đánh giá */}
+        {/* Controls */}
         {selectedLecture && (
           <View style={styles.controlsContainer}>
             <Text style={styles.lectureTitle}>
@@ -319,32 +310,6 @@ export default function LessonScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        )}
-
-        {/* --- [NEW] WIDGET AI PHÂN TÍCH (Thay thế phần Thành tích cũ) --- */}
-        {aiInsight && (
-          <View style={styles.aiWidgetContainer}>
-            <View style={styles.aiHeader}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-              >
-                <Ionicons name="sparkles" size={20} color="#9C27B0" />
-                <Text style={styles.aiTitle}>Trợ lý AI phân tích</Text>
-              </View>
-              <View style={styles.aiScoreBadge}>
-                <Text style={styles.aiScoreText}>{aiInsight.score}/10</Text>
-              </View>
-            </View>
-
-            <Text style={styles.aiMessage}>"{aiInsight.dailyMessage}"</Text>
-
-            {aiInsight.actionItem && (
-              <View style={styles.aiActionBox}>
-                <Ionicons name="bulb-outline" size={16} color="#0277BD" />
-                <Text style={styles.aiActionText}>{aiInsight.actionItem}</Text>
-              </View>
-            )}
           </View>
         )}
 
@@ -406,7 +371,7 @@ export default function LessonScreen() {
         ))}
       </ScrollView>
 
-      {/* --- Modal Đánh Giá --- */}
+      {/* --- Modal Đánh Giá (Giữ nguyên như cũ) --- */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -561,60 +526,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
 
-  // --- AI Widget Styles ---
-  aiWidgetContainer: {
-    backgroundColor: "#F3E5F5", // Tím nhạt
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E1BEE7",
-  },
-  aiHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  aiTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#7B1FA2", // Tím đậm
-  },
-  aiScoreBadge: {
-    backgroundColor: "#9C27B0",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  aiScoreText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  aiMessage: {
-    fontSize: 14,
-    color: "#4A148C",
-    fontStyle: "italic",
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  aiActionBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#FFFFFF",
-    padding: 8,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-  },
-  aiActionText: {
-    fontSize: 13,
-    color: "#0277BD",
-    fontWeight: "600",
-  },
-
-  // --- Modal Styles ---
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

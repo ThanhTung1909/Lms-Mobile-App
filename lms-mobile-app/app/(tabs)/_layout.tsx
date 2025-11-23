@@ -9,16 +9,42 @@ import {
 } from "react-native";
 import { Tabs, usePathname, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/src/providers/AuthProvider";
+
+import { getNotifications } from "@/src/api/modules/notificationApi";
 
 function CustomHeader() {
   const pathname = usePathname();
   const { user } = useAuth();
   const router = useRouter();
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await getNotifications();
+      if (res.success) {
+        setUnreadCount(res.unreadCount || 0);
+      }
+    } catch (error) {
+      console.log("Failed to fetch notification count", error);
+    }
+  };
+
+  useEffect(() => {
+
+    fetchUnreadCount();
+
+    const interval = setInterval(fetchUnreadCount, 15000);
+
+    return () => clearInterval(interval);
+  }, [pathname]);
+
   useEffect(() => {
     fadeAnim.setValue(0);
     Animated.timing(fadeAnim, {
@@ -106,6 +132,14 @@ function CustomHeader() {
             style={styles.iconBtn}
           >
             <Ionicons name="notifications-outline" size={22} color="#1e3a8a" />
+
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.push("/(tabs)/settings")}>
@@ -271,6 +305,27 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    position: "relative",
+  },
+
+  badge: {
+    position: "absolute",
+    right: -2,
+    top: -2,
+    backgroundColor: "#FF3B30", 
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#fff",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
   },
 
   avatar: {

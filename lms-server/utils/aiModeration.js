@@ -17,9 +17,10 @@ export const verifyCommentAI = async (text) => {
                     - Nhận diện lời lẽ thô lỗ ngay cả khi thiếu ngữ cảnh.
                     - Chỉ cần chứa 1 từ nhạy cảm → xem là vi phạm.
                     - Ưu tiên an toàn tuyệt đối, không được suy diễn ý tốt.
+                    - Cực kỳ nghiêm ngặt với các từ ngữ mang tính công kích cá nhân.
 
                     Nếu bình luận có VI PHẠM → trả:
-                    {"violate": true, "reason": "Giải thích ngắn gọn"}
+                    {"violate": true, "reason": "Lý do ngắn gọn bằng tiếng Việt}
 
                     Nếu KHÔNG vi phạm → trả:
                     {"violate": false, "reason": "ok"}

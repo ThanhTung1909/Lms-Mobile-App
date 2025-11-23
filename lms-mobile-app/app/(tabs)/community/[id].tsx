@@ -52,9 +52,6 @@ export default function DiscussionScreen() {
   const fetchDetail = async () => {
     try {
       if (!discussionId) return;
-      // Giả sử API getPostDetail trả về cấu trúc PostType
-      // Nếu API backend chưa làm hàm getById, bạn có thể phải tự sửa backend trước
-      // Hoặc tạm thời dùng getPosts() lọc ra (không khuyến khích)
       const res = await getPostDetail(discussionId);
       if (res.success) {
         setPost(res.data);
@@ -70,12 +67,12 @@ export default function DiscussionScreen() {
     fetchDetail();
   }, [discussionId]);
 
-  // Handle Actions
+  
   const handleLikePost = async () => {
     if (!post) return;
     const oldLiked = post.isLiked;
 
-    // UI Optimistic
+    
     setPost((prev) =>
       prev
         ? {
@@ -89,7 +86,7 @@ export default function DiscussionScreen() {
     try {
       await toggleLikePost(post.postId);
     } catch (error) {
-      // Revert
+      
       setPost((prev) =>
         prev
           ? {
@@ -108,7 +105,7 @@ export default function DiscussionScreen() {
     try {
       await createComment(post.postId, newComment);
       setNewComment("");
-      fetchDetail(); // Reload lại để hiện comment mới (hoặc append vào list bằng tay)
+      fetchDetail(); 
     } catch (error) {
       Alert.alert("Lỗi", "Không thể gửi bình luận");
     } finally {
@@ -144,7 +141,7 @@ export default function DiscussionScreen() {
           </Text>
         </View>
 
-        {/* Content (Render HTML nếu dùng RichEditor, hoặc Text thường) */}
+      
         <Text style={styles.content}>{post.content}</Text>
 
         {/* Actions */}
@@ -180,11 +177,11 @@ export default function DiscussionScreen() {
             key={comment.commentId}
             author={comment.user?.fullName}
             content={comment.content}
-            likes={0} // Comment like chưa implement
+            likes={0} 
             dislikes={0}
             onLike={() => {}}
             onDislike={() => {}}
-            // avatarUrl={comment.user?.avatarUrl} // Cần update CommentItem
+            // avatarUrl={comment.user?.avatarUrl} 
           />
         ))}
       </ScrollView>

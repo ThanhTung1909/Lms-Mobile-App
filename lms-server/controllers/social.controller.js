@@ -3,6 +3,8 @@ import Comment from "../models_mongo/Comment.js";
 import PostLike from "../models_mongo/PostLike.js";
 import db from "../models/index.js";
 import { createNotification } from "./notification.controller.js";
+import { verifyCommentAI } from "../utils/aiModeration.js";
+
 
 const populateUserInfo = async (items, userIdField = "userId") => {
   const userIds = [...new Set(items.map((item) => item[userIdField]))];
@@ -22,17 +24,27 @@ const populateUserInfo = async (items, userIdField = "userId") => {
     return {
       ...itemObj,
       user: userMap[item[userIdField]] || {
-        fullName: "Unknown User",
+        fullName: "Người dùng ẩn danh",
         avatarUrl: null,
       },
     };
   });
 };
 
+
 export const createPost = async (req, res) => {
   try {
     const { content, imageUrls } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id 
+
+
+    const aiCheck = await verifyCommentAI(content);
+    if (aiCheck.violate) {
+      return res.status(400).json({
+        success: false,
+        message: `Nội dung vi phạm tiêu chuẩn cộng đồng: ${aiCheck.reason}`,
+      });
+    }
 
     const newPost = await Post.create({ userId, content, imageUrls });
 
@@ -49,9 +61,10 @@ export const createPost = async (req, res) => {
   }
 };
 
+
 export const getPosts = async (req, res) => {
   try {
-    const currentUserId = req.user.userId;
+    const currentUserId = req.user.id 
     const { page = 1, limit = 10 } = req.query;
 
     const posts = await Post.find()
@@ -79,10 +92,11 @@ export const getPosts = async (req, res) => {
   }
 };
 
+
 export const toggleLikePost = async (req, res) => {
   try {
     const { postId } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id 
 
     const existingLike = await PostLike.findOne({ postId, userId });
     const post = await Post.findById(postId);
@@ -110,7 +124,7 @@ export const toggleLikePost = async (req, res) => {
           senderId: userId,
           type: "LIKE",
           title: "Tương tác mới",
-          message: `${liker.fullName} đã thích bài viết của bạn.`,
+          message: `${liker?.fullName || "Ai đó"} đã thích bài viết của bạn.`,
           metadata: { postId: post._id.toString() },
         });
       }
@@ -126,7 +140,15 @@ export const createComment = async (req, res) => {
   try {
     const { postId } = req.params;
     const { content } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id
+
+    const aiCheck = await verifyCommentAI(content);
+    if (aiCheck.violate) {
+      return res.status(400).json({
+        success: false,
+        message: `Bình luận bị chặn do vi phạm tiêu chuẩn: ${aiCheck.reason}`,
+      });
+    }
 
     const newComment = await Comment.create({ postId, userId, content });
 
@@ -143,7 +165,7 @@ export const createComment = async (req, res) => {
         senderId: userId,
         type: "COMMENT",
         title: "Bình luận mới",
-        message: `${user.fullName} đã bình luận: "${content}"`,
+        message: `${user?.fullName || "Ai đó"} đã bình luận: "${content}"`,
         metadata: { postId: post._id.toString() },
       });
     }
@@ -157,11 +179,10 @@ export const createComment = async (req, res) => {
   }
 };
 
-// 5. Lấy danh sách bình luận
 export const getComments = async (req, res) => {
   try {
     const { postId } = req.params;
-    const comments = await Comment.find({ postId }).sort({ createdAt: 1 });
+    const comments = await Comment.find({ postId }).sort({ createdAt: -1 }); 
 
     const commentsWithUser = await populateUserInfo(comments);
 
@@ -171,42 +192,35 @@ export const getComments = async (req, res) => {
   }
 };
 
-// social.controller.js
 export const getPostById = async (req, res) => {
   try {
     const { postId } = req.params;
-    const currentUserId = req.user.userId;
+    const currentUserId = req.user.id 
 
-    const post = await db.Post.findByPk(postId, {
-      include: [
-        { model: db.User, as: "author", attributes: ["fullName", "avatarUrl"] },
-        {
-          model: db.Comment,
-          as: "comments",
-          include: [
-            {
-              model: db.User,
-              as: "user",
-              attributes: ["fullName", "avatarUrl"],
-            },
-          ],
-          order: [["createdAt", "DESC"]], // Comment mới nhất lên đầu
-        },
-      ],
-    });
+    const post = await Post.findById(postId);
 
     if (!post)
       return res.status(404).json({ success: false, message: "Not found" });
 
-    const likeCount = await db.PostLike.count({ where: { postId } });
-    const isLiked = await db.PostLike.findOne({
-      where: { postId, userId: currentUserId },
+    const author = await db.User.findByPk(post.userId, {
+      attributes: ["userId", "fullName", "avatarUrl"],
+    });
+
+    const comments = await Comment.find({ postId }).sort({ createdAt: -1 });
+    const commentsWithUser = await populateUserInfo(comments);
+
+    const likeCount = await PostLike.countDocuments({ postId });
+    const isLiked = await PostLike.findOne({
+      postId,
+      userId: currentUserId,
     });
 
     res.status(200).json({
       success: true,
       data: {
-        ...post.toJSON(),
+        ...post.toObject(),
+        author: author || { fullName: "Unknown", avatarUrl: null },
+        comments: commentsWithUser,
         likeCount,
         isLiked: !!isLiked,
       },

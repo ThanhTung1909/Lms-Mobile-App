@@ -27,3 +27,12 @@ export const markAllNotificationsRead = async () => {
     throw error;
   }
 };
+
+export const markNotificationAsRead = async (id: string) => {
+  try {
+    const response = await apiClient.patch(`/notifi/${id}/read`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

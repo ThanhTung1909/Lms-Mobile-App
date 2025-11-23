@@ -13,10 +13,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Colors } from "@/src/constants/theme";
 
-// Import API Module đã tạo
 import {
   getNotifications,
   markAllNotificationsRead,
+  markNotificationAsRead,
   NotificationItem,
 } from "@/src/api/modules/notificationApi";
 
@@ -26,7 +26,6 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // --- API Calls ---
   const fetchNotifications = async () => {
     try {
       const res = await getNotifications();
@@ -46,7 +45,6 @@ export default function NotificationsScreen() {
   }, []);
 
   const handleMarkAllAsRead = async () => {
-
     const updatedNotifications = notifications.map((notif) => ({
       ...notif,
       isRead: true,
@@ -56,8 +54,9 @@ export default function NotificationsScreen() {
     try {
       await markAllNotificationsRead();
     } catch (error) {
-      console.log("Error marking read");
+      console.log("Error marking all read", error);
 
+      fetchNotifications();
     }
   };
 
@@ -66,8 +65,18 @@ export default function NotificationsScreen() {
     fetchNotifications();
   }, []);
 
- 
-  const handlePressNotification = (item: NotificationItem) => {
+  const handlePressNotification = async (item: NotificationItem) => {
+    if (!item.isRead) {
+      setNotifications((prevNotifications) =>
+        prevNotifications.map((notif) =>
+          notif._id === item._id ? { ...notif, isRead: true } : notif,
+        ),
+      );
+
+      markNotificationAsRead(item._id).catch((err) => {
+        console.log("Failed to mark read:", err);
+      });
+    }
 
     if (item.type === "AI_INSIGHT") {
       router.push("/(tabs)/home");
@@ -80,10 +89,6 @@ export default function NotificationsScreen() {
         params: { id: item.metadata.postId },
       });
     }
-    if (!item.isRead) {
-      // Có thể gọi API mark read 1 item nếu backend hỗ trợ,
-      // hoặc để handleMarkAllAsRead xử lý sau.
-    }
   };
 
   const getNotificationStyle = (type: string) => {
@@ -91,26 +96,26 @@ export default function NotificationsScreen() {
       case "AI_INSIGHT":
         return {
           icon: "sparkles",
-          bgColor: "#F3E5F5", 
+          bgColor: "#F3E5F5",
           iconColor: "#9C27B0",
         };
       case "LIKE":
         return {
           icon: "heart",
-          bgColor: "#FCE4EC", 
+          bgColor: "#FCE4EC",
           iconColor: "#E91E63",
         };
       case "COMMENT":
         return {
           icon: "chatbubble",
-          bgColor: "#E3F2FD", 
+          bgColor: "#E3F2FD",
           iconColor: "#2196F3",
         };
       case "SYSTEM":
       default:
         return {
           icon: "notifications",
-          bgColor: "#F8F9FA", 
+          bgColor: "#F8F9FA",
           iconColor: "#6C757D",
         };
     }
@@ -242,7 +247,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F8F9FA",
   },
   cardUnread: {
-    backgroundColor: "#F0F8FF", 
+    backgroundColor: "#F0F8FF",
   },
   iconContainer: {
     width: 48,
